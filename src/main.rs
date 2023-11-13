@@ -1,4 +1,4 @@
-use std::io::Write;
+use std::{default, io::Write};
 
 use colored::{ColoredString, Colorize};
 fn main() {
@@ -9,6 +9,7 @@ fn main() {
         end_rank: 0,
         end_file: 0,
     };
+    let mut turn_count: i32 = 0;
     draw_board(&start_board());
     loop {
         let mut line: String = String::default();
@@ -35,22 +36,24 @@ fn main() {
                 success = false;
             }
             if 48 < bytes[1] && bytes[1] <= 57 {
-                current_move.end_rank = 7-(bytes[3] - 49);
+                current_move.end_rank = 7 - (bytes[3] - 49);
                 //println!("{}", bytes[3] - 49);
             } else {
                 success = false;
             }
             if success {
-                validate_and_play(current_move, &mut board);
+                validate_and_play(current_move, &mut board, &turn_count);
+                turn_count += 1;
             } else {
                 println!();
                 println!("Invalid move.")
             }
-            println!();
-            draw_board(&board);
         } else {
+            println!();
             println!("Invalid length for move");
         }
+        println!();
+        draw_board(&board);
     }
 }
 fn start_board() -> BoardState {
@@ -115,50 +118,157 @@ fn start_board() -> BoardState {
     state.tiles[5][6].piece_colour = BoardColours::Black;
     state.tiles[6][6].piece_colour = BoardColours::Black;
     state.tiles[7][6].piece_colour = BoardColours::Black;
-    
+
     return state;
 }
 
-fn validate_and_play(potential_move: PieceMove, board: &mut BoardState) {
-    if validate_move(potential_move, board) {
-        move_piece(potential_move, board);
+fn validate_and_play(potential_move: PieceMove, board: &mut BoardState, turn_count: &i32) {
+    if validate_move(potential_move, board, turn_count) {
+        move_piece(potential_move, board, turn_count);
         board.current_player = match board.current_player {
-            BoardColours::Black => {
-                BoardColours::White
-            },
-            BoardColours::White => {
-                BoardColours::Black
+            BoardColours::Black => BoardColours::White,
+            BoardColours::White => BoardColours::Black,
+        }
+    }
+}
+fn move_piece(intended_move: PieceMove, board: &mut BoardState, turn_count: &i32) {
+    match board.tiles[usize::from(intended_move.end_file)][usize::from(intended_move.end_rank)].piece {
+        Some(piece) => {
+            match piece {
+                Pieces::King => todo!(),
+                Pieces::EnPassant(ep_turn_count) => {
+                    if ep_turn_count + 1 == *turn_count {
+                        match board.current_player {
+                            BoardColours::Black => {
+                                board.tiles[usize::from(intended_move.end_file)][usize::from(intended_move.end_rank) + 1].piece = None;
+                            },
+                            BoardColours::White => {
+                                board.tiles[usize::from(intended_move.end_file)][usize::from(intended_move.end_rank) - 1].piece = None;
+                            },
+                        }
+                    }
+                    board.tiles[usize::from(intended_move.end_file)][usize::from(intended_move.end_rank)].piece = None;
+                },
+                _default => (),
             }
         }
+        None => (),
     }
+
+
+    board.tiles[usize::from(intended_move.end_file)][usize::from(intended_move.end_rank)] =
+        board.tiles[usize::from(intended_move.start_file)][usize::from(intended_move.start_rank)];
+    board.tiles[usize::from(intended_move.start_file)][usize::from(intended_move.start_rank)] =
+        TileState {
+            piece: None,
+            piece_colour: BoardColours::White,
+        };
 }
-fn move_piece(intended_move: PieceMove, board: &mut BoardState) {
-    println!("Start R: {}", intended_move.start_rank);
-    println!("Start F: {}", intended_move.start_file);
-    println!("End R: {}", intended_move.end_rank);
-    println!("End F: {}", intended_move.end_file);
-    board.tiles[usize::from(intended_move.end_file)][usize::from(intended_move.end_rank)] = board.tiles[usize::from(intended_move.start_file)][usize::from(intended_move.start_rank)];
-    board.tiles[usize::from(intended_move.start_file)][usize::from(intended_move.start_rank)] = TileState {
-        piece: None,
-        piece_colour: BoardColours::White,
-    };
-}
-fn validate_move(potential_move: PieceMove, board: &BoardState) -> bool {
+fn validate_move(potential_move: PieceMove, board: &mut BoardState, turn_count: &i32) -> bool {
+    if !match board.tiles[usize::from(potential_move.start_file)]
+        [usize::from(potential_move.start_rank)]
+    .piece
+    {
+        Some(piece) => match piece {
+            Pieces::EnPassant(_) => false,
+            _default => true,
+        },
+        None => false,
+    } {
+        return false; //Checks the piece is "moveable" (not 'None', or 'EnPassant placeholder')
+    }
     if board.tiles[usize::from(potential_move.start_file)][usize::from(potential_move.start_rank)]
-        .piece.is_none() {
-            return false; //Checks the starting piece exists
+        .piece_colour
+        != board.current_player
+    {
+        return false; //Checks the moved piece belong to the player
+    }
+    if board.tiles[usize::from(potential_move.start_file)][usize::from(potential_move.start_rank)]
+        .piece_colour
+        == board.tiles[usize::from(potential_move.end_file)][usize::from(potential_move.end_rank)]
+            .piece_colour
+        && match board.tiles[usize::from(potential_move.end_file)][usize::from(potential_move.end_rank)].piece {
+            Some(piece) => match piece {
+                Pieces::EnPassant(_) => false,
+                _default => true,
+            },
+            None => false,
         }
-    if board.tiles[usize::from(potential_move.start_file)][usize::from(potential_move.start_rank)].piece_colour != board.current_player {
-        return false; //Checks the pieces belong to the player
-    }
-    if board.tiles[usize::from(potential_move.start_file)][usize::from(potential_move.start_rank)].piece_colour == board.tiles[usize::from(potential_move.end_file)][usize::from(potential_move.end_rank)].piece_colour {
-        return false; //Checks the player isn't taking their own pieces
-    }
+    {
+        return false; //Checks the player isn't taking their own pieces (and that piece exists/is en passant)
+    } //This also prevents them from not moving(e.g. moving to where they are)
 
-
+    if !match board.tiles[usize::from(potential_move.start_file)]
+        [usize::from(potential_move.start_rank)]
+    .piece
+    {
+        Some(piece) => match piece {
+            Pieces::Pawn => validate_pawn(potential_move, board, turn_count), //Checks that the chosen piece moves appropriately
+            Pieces::Rook => validate_rook(potential_move, board),
+            Pieces::Knight => validate_knight(potential_move, board),
+            Pieces::Bishop => validate_bishop(potential_move, board),
+            Pieces::Queen => validate_queen(potential_move, board),
+            Pieces::King => validate_king(potential_move, board),
+            Pieces::EnPassant(_) => false,
+        },
+        None => false,
+    } {
+        return false;
+    }
 
     return true;
 }
+fn validate_king(potential_move: PieceMove, board: &BoardState) -> bool {
+    todo!();
+}
+fn validate_queen(potential_move: PieceMove, board: &BoardState) -> bool {
+    todo!();
+}
+fn validate_knight(potential_move: PieceMove, board: &BoardState) -> bool {
+    todo!();
+}
+fn validate_bishop(potential_move: PieceMove, board: &BoardState) -> bool {
+    todo!();
+}
+fn validate_rook(potential_move: PieceMove, board: &BoardState) -> bool {
+    todo!();
+}
+fn validate_pawn(potential_move: PieceMove, board: &mut BoardState, turn_count: &i32) -> bool {
+    let is_taking = board.tiles[usize::from(potential_move.end_file)]
+        [usize::from(potential_move.end_rank)]
+    .piece
+    .is_some();
+    let mut correct_file: bool = false;
+    let mut correct_rank: bool = false;
+    match is_taking {
+        true => correct_file = potential_move.start_file.abs_diff(potential_move.end_file) == 1,
+        false => correct_file = potential_move.start_file == potential_move.end_file,
+    };
+    match board.current_player {
+        BoardColours::Black => {
+            correct_rank =
+                i16::from(potential_move.start_rank) - i16::from(potential_move.end_rank) == 1;
+
+            if i16::from(potential_move.start_rank) - i16::from(potential_move.end_rank) == 2
+                    && potential_move.start_rank == 6 {
+                        correct_rank = true;
+                        board.tiles[usize::from(potential_move.start_file)][usize::from(potential_move.start_rank - 1)].piece = Some(Pieces::EnPassant(*turn_count));
+                    }
+        }
+        BoardColours::White => {
+            correct_rank =
+                i16::from(potential_move.end_rank) - i16::from(potential_move.start_rank) == 1;
+
+            if i16::from(potential_move.end_rank) - i16::from(potential_move.start_rank) == 2
+                    && potential_move.start_rank == 1 {
+                        correct_rank = true;
+                        board.tiles[usize::from(potential_move.start_file)][usize::from(potential_move.start_rank + 1)].piece = Some(Pieces::EnPassant(*turn_count));
+                    }
+        }
+    };
+    correct_file && correct_rank
+}
+
 #[derive(Clone, Copy)]
 struct PieceMove {
     start_rank: u8,
@@ -189,6 +299,7 @@ enum Pieces {
     Bishop,
     Queen,
     King,
+    EnPassant(i32),
 }
 fn draw_board(board: &BoardState) {
     let mut y: i8 = 0;
@@ -224,16 +335,30 @@ fn draw_board(board: &BoardState) {
         y += 1;
     }
     println!();
-    println!("{}", "   White's turn   ".black().on_white());
-    print!("{}", " White's move:".black().on_white());
+    match board.current_player {
+        BoardColours::Black => {
+            println!("{}", "   Black's turn   ".white().on_bright_black());
+            print!("{}", " Black's move:".white().on_bright_black());
+        }
+        BoardColours::White => {
+            println!("{}", "   White's turn   ".black().on_white());
+            print!("{}", " White's move:".black().on_white());
+        }
+    }
     std::io::stdout().flush().unwrap();
 }
 
 fn to_piece_name(tile: &TileState, colour: BoardColours) -> ColoredString {
     let mut tile_text: String = match tile.piece {
-        Some(_) => match tile.piece_colour {
-            BoardColours::White => "w".to_string(),
-            BoardColours::Black => "b".to_string(),
+        Some(piece) => match tile.piece_colour {
+            BoardColours::White => match piece {
+                Pieces::EnPassant(_) => "E".to_string(), //Swap to " " when done testing
+                _default => "w".to_string(),
+            },
+            BoardColours::Black => match piece {
+                Pieces::EnPassant(_) => "E".to_string(), //Swap to " " when done testing
+                _default => "b".to_string(),
+            },
         },
         None => " ".to_string(),
     };
@@ -246,6 +371,7 @@ fn to_piece_name(tile: &TileState, colour: BoardColours) -> ColoredString {
             Pieces::Bishop => 'B',
             Pieces::Queen => 'Q',
             Pieces::King => 'K',
+            Pieces::EnPassant(_) => 'n', // Swap to ' ' when done testing
         },
         None => ' ',
     });
