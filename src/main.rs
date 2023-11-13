@@ -39,14 +39,13 @@ fn main() {
     */
 }
 fn start_board() -> BoardState {
-    let x: TileState = TileState {
+    let blank_row: TileState = TileState {
         piece: None,
         piece_colour: BoardColours::White,
-        background_colour: BoardColours::Black,
     };
     let mut state: BoardState = BoardState {
         current_player: BoardColours::White,
-        tiles: vec![vec![x; 8]; 8],
+        tiles: vec![vec![blank_row; 8]; 8],
     };
     state.tiles[0][0].piece = Some(Pieces::Rook);
     state.tiles[1][0].piece = Some(Pieces::Knight);
@@ -57,16 +56,14 @@ fn start_board() -> BoardState {
     state.tiles[6][0].piece = Some(Pieces::Knight);
     state.tiles[7][0].piece = Some(Pieces::Rook);
 
-    state.tiles[0][0].background_colour = BoardColours::White;
-    state.tiles[1][0].background_colour = BoardColours::Black;
-    state.tiles[2][0].background_colour = BoardColours::White;
-    state.tiles[3][0].background_colour = BoardColours::Black;
-    state.tiles[4][0].background_colour = BoardColours::White;
-    state.tiles[5][0].background_colour = BoardColours::Black;
-    state.tiles[6][0].background_colour = BoardColours::White;
-    state.tiles[7][0].background_colour = BoardColours::Black;
-
-    
+    state.tiles[0][1].piece = Some(Pieces::Pawn);
+    state.tiles[1][1].piece = Some(Pieces::Pawn);
+    state.tiles[2][1].piece = Some(Pieces::Pawn);
+    state.tiles[3][1].piece = Some(Pieces::Pawn);
+    state.tiles[4][1].piece = Some(Pieces::Pawn);
+    state.tiles[5][1].piece = Some(Pieces::Pawn);
+    state.tiles[6][1].piece = Some(Pieces::Pawn);
+    state.tiles[7][1].piece = Some(Pieces::Pawn);
 
     state.tiles[0][7].piece = Some(Pieces::Rook);
     state.tiles[1][7].piece = Some(Pieces::Knight);
@@ -77,14 +74,32 @@ fn start_board() -> BoardState {
     state.tiles[6][7].piece = Some(Pieces::Knight);
     state.tiles[7][7].piece = Some(Pieces::Rook);
 
-    state.tiles[0][7].background_colour = BoardColours::Black;
-    state.tiles[1][7].background_colour = BoardColours::White;
-    state.tiles[2][7].background_colour = BoardColours::Black;
-    state.tiles[3][7].background_colour = BoardColours::White;
-    state.tiles[4][7].background_colour = BoardColours::Black;
-    state.tiles[5][7].background_colour = BoardColours::White;
-    state.tiles[6][7].background_colour = BoardColours::Black;
-    state.tiles[7][7].background_colour = BoardColours::White;
+    state.tiles[0][7].piece_colour = BoardColours::Black;
+    state.tiles[1][7].piece_colour = BoardColours::Black;
+    state.tiles[2][7].piece_colour = BoardColours::Black;
+    state.tiles[3][7].piece_colour = BoardColours::Black;
+    state.tiles[4][7].piece_colour = BoardColours::Black;
+    state.tiles[5][7].piece_colour = BoardColours::Black;
+    state.tiles[6][7].piece_colour = BoardColours::Black;
+    state.tiles[7][7].piece_colour = BoardColours::Black;
+
+    state.tiles[0][6].piece = Some(Pieces::Pawn);
+    state.tiles[1][6].piece = Some(Pieces::Pawn);
+    state.tiles[2][6].piece = Some(Pieces::Pawn);
+    state.tiles[3][6].piece = Some(Pieces::Pawn);
+    state.tiles[4][6].piece = Some(Pieces::Pawn);
+    state.tiles[5][6].piece = Some(Pieces::Pawn);
+    state.tiles[6][6].piece = Some(Pieces::Pawn);
+    state.tiles[7][6].piece = Some(Pieces::Pawn);
+
+    state.tiles[0][6].piece_colour = BoardColours::Black;
+    state.tiles[1][6].piece_colour = BoardColours::Black;
+    state.tiles[2][6].piece_colour = BoardColours::Black;
+    state.tiles[3][6].piece_colour = BoardColours::Black;
+    state.tiles[4][6].piece_colour = BoardColours::Black;
+    state.tiles[5][6].piece_colour = BoardColours::Black;
+    state.tiles[6][6].piece_colour = BoardColours::Black;
+    state.tiles[7][6].piece_colour = BoardColours::Black;
     return state;
 }
 
@@ -102,7 +117,6 @@ enum EnterMoveState {
 struct TileState {
     piece: Option<Pieces>,
     piece_colour: BoardColours,
-    background_colour: BoardColours,
 }
 #[derive(Clone, Copy)]
 enum BoardColours {
@@ -137,7 +151,12 @@ fn draw_board(board: &BoardState) {
                     "{}",
                     to_piece_name(
                         &board.tiles[usize::try_from(x.clone() - 1).expect("index out of bounds")]
-                            [usize::try_from(y.clone()).expect("index out of bounds")]
+                            [usize::try_from(y.clone()).expect("index out of bounds")],
+                        if (x + y) % 2 == 1 {
+                            BoardColours::White
+                        } else {
+                            BoardColours::Black
+                        }
                     )
                 )
             }
@@ -151,23 +170,20 @@ fn draw_board(board: &BoardState) {
     print!("{}", " White's move:".black().on_white());
 }
 
-fn to_piece_name(tile: &TileState) -> ColoredString {
+fn to_piece_name(tile: &TileState, colour: BoardColours) -> ColoredString {
     let mut tile_text: String = match tile.piece {
-        Some(_) => {
-            match tile.piece_colour {
-                BoardColours::White => "W".to_string(),
-                BoardColours::Black => "B".to_string(),
-            }
-        }
-        None => (" ".to_string())
+        Some(_) => match tile.piece_colour {
+            BoardColours::White => "W".to_string(),
+            BoardColours::Black => "B".to_string(),
+        },
+        None => (" ".to_string()),
     };
-    
-    
+
     tile_text.push(match &tile.piece {
         Some(piece) => match piece {
             Pieces::Pawn => 'P',
             Pieces::Rook => 'R',
-            Pieces::Knight => 'K',
+            Pieces::Knight => 'N',
             Pieces::Bishop => 'B',
             Pieces::Queen => 'Q',
             Pieces::King => 'K',
@@ -175,7 +191,7 @@ fn to_piece_name(tile: &TileState) -> ColoredString {
         None => ' ',
     });
     let colored_text: ColoredString;
-    return match tile.background_colour {
+    return match colour {
         BoardColours::White => {
             colored_text = tile_text.on_white();
             colored_text.black()
