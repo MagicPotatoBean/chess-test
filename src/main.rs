@@ -24,7 +24,7 @@ fn main() {
                 success = false;
             }
             if 48 < bytes[1] && bytes[1] <= 57 {
-                current_move.start_rank = (bytes[1] - 49);
+                current_move.start_rank = bytes[1] - 49;
                 //println!("{}", bytes[1] - 49);
             } else {
                 success = false;
@@ -36,7 +36,7 @@ fn main() {
                 success = false;
             }
             if 48 < bytes[1] && bytes[1] <= 57 {
-                current_move.end_rank = (bytes[3] - 49);
+                current_move.end_rank = bytes[3] - 49;
                 //println!("{}", bytes[3] - 49);
             } else {
                 success = false;
@@ -242,8 +242,8 @@ fn validate_pawn(potential_move: PieceMove, board: &mut BoardState, turn_count: 
         },
         None => false,
     };
-    let mut correct_file: bool = false;
-    let mut correct_rank: bool = false;
+    let correct_file: bool;
+    let mut correct_rank: bool;
     match is_taking {
         true => correct_file = potential_move.start_file.abs_diff(potential_move.end_file) == 1,
         false => correct_file = potential_move.start_file == potential_move.end_file,
