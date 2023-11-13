@@ -1,4 +1,4 @@
-use std::{default, io::Write};
+use std::io::Write;
 
 use colored::{ColoredString, Colorize};
 fn main() {
@@ -135,7 +135,6 @@ fn move_piece(intended_move: PieceMove, board: &mut BoardState, turn_count: &i32
     match board.tiles[usize::from(intended_move.end_file)][usize::from(intended_move.end_rank)].piece {
         Some(piece) => {
             match piece {
-                Pieces::King => todo!(),
                 Pieces::EnPassant(ep_turn_count) => {
                     if ep_turn_count + 1 == *turn_count {
                         match board.current_player {
@@ -238,8 +237,8 @@ fn validate_pawn(potential_move: PieceMove, board: &mut BoardState, turn_count: 
         [usize::from(potential_move.end_rank)]
     .piece
     .is_some();
-    let mut correct_file: bool = false;
-    let mut correct_rank: bool = false;
+    let correct_file: bool;
+    let mut correct_rank: bool;
     match is_taking {
         true => correct_file = potential_move.start_file.abs_diff(potential_move.end_file) == 1,
         false => correct_file = potential_move.start_file == potential_move.end_file,
