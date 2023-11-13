@@ -1,42 +1,57 @@
-use std::{clone, io::Read};
+use std::io::Write;
 
 use colored::{ColoredString, Colorize};
 fn main() {
+    let mut board: BoardState = start_board();
+    let mut current_move: PieceMove = PieceMove {
+        start_rank: 0,
+        start_file: 0,
+        end_rank: 0,
+        end_file: 0,
+    };
     draw_board(&start_board());
-
-    //let current_state: EnterMoveState = EnterMoveState::Letter1;
-    /*
     loop {
-        draw_board(&start_board());
-        let byte = std::io::stdin()
-            .bytes()
-            .next()
-            .and_then(|result| result.ok());
-        match byte {
-            Some(mut value) => match current_state {
-                EnterMoveState::Letter1 => {
-                    if 64 < value && value < 90 {
-                        value = value - 64
-                    } else if 97 < value && value < 122 {
-                    }
-                }
-                EnterMoveState::Number1 => todo!(),
-                EnterMoveState::Letter2 => todo!(),
-                EnterMoveState::Number2 => todo!(),
-            },
-            None => {
-                println!();
-                print!("Encountered an error taking input, sorry!");
+        let mut line: String = String::default();
+        std::io::stdin().read_line(&mut line).unwrap();
+        if line.len().eq(&usize::from(u8::from(6))) {
+            let bytes: Vec<u8> = line.as_bytes().to_ascii_uppercase();
+            let mut success: bool = true;
+            if 64 <= bytes[0] && bytes[0] <= 72 {
+                current_move.start_file = bytes[0] - 65;
+                //println!("{}", bytes[0] - 65);
+            } else {
+                success = false;
             }
-        }
-        match current_state {
-            EnterMoveState::Letter1 => todo!(),
-            EnterMoveState::Number1 => todo!(),
-            EnterMoveState::Letter2 => todo!(),
-            EnterMoveState::Number2 => todo!(),
+            if 48 < bytes[1] && bytes[1] <= 57 {
+                current_move.start_rank = 7 - (bytes[1] - 49);
+                //println!("{}", bytes[1] - 49);
+            } else {
+                success = false;
+            }
+            if 64 <= bytes[2] && bytes[2] <= 72 {
+                current_move.end_file = bytes[2] - 65;
+                //println!("{}", bytes[2] - 65);
+            } else {
+                success = false;
+            }
+            if 48 < bytes[1] && bytes[1] <= 57 {
+                current_move.end_rank = 7-(bytes[3] - 49);
+                //println!("{}", bytes[3] - 49);
+            } else {
+                success = false;
+            }
+            if success {
+                validate_and_play(current_move, &mut board);
+            } else {
+                println!();
+                println!("Invalid move.")
+            }
+            println!();
+            draw_board(&board);
+        } else {
+            println!("Invalid length for move");
         }
     }
-    */
 }
 fn start_board() -> BoardState {
     let blank_row: TileState = TileState {
@@ -100,25 +115,68 @@ fn start_board() -> BoardState {
     state.tiles[5][6].piece_colour = BoardColours::Black;
     state.tiles[6][6].piece_colour = BoardColours::Black;
     state.tiles[7][6].piece_colour = BoardColours::Black;
+    
     return state;
 }
 
+fn validate_and_play(potential_move: PieceMove, board: &mut BoardState) {
+    if validate_move(potential_move, board) {
+        move_piece(potential_move, board);
+        board.current_player = match board.current_player {
+            BoardColours::Black => {
+                BoardColours::White
+            },
+            BoardColours::White => {
+                BoardColours::Black
+            }
+        }
+    }
+}
+fn move_piece(intended_move: PieceMove, board: &mut BoardState) {
+    println!("Start R: {}", intended_move.start_rank);
+    println!("Start F: {}", intended_move.start_file);
+    println!("End R: {}", intended_move.end_rank);
+    println!("End F: {}", intended_move.end_file);
+    board.tiles[usize::from(intended_move.end_file)][usize::from(intended_move.end_rank)] = board.tiles[usize::from(intended_move.start_file)][usize::from(intended_move.start_rank)];
+    board.tiles[usize::from(intended_move.start_file)][usize::from(intended_move.start_rank)] = TileState {
+        piece: None,
+        piece_colour: BoardColours::White,
+    };
+}
+fn validate_move(potential_move: PieceMove, board: &BoardState) -> bool {
+    if board.tiles[usize::from(potential_move.start_file)][usize::from(potential_move.start_rank)]
+        .piece.is_none() {
+            return false; //Checks the starting piece exists
+        }
+    if board.tiles[usize::from(potential_move.start_file)][usize::from(potential_move.start_rank)].piece_colour != board.current_player {
+        return false; //Checks the pieces belong to the player
+    }
+    if board.tiles[usize::from(potential_move.start_file)][usize::from(potential_move.start_rank)].piece_colour == board.tiles[usize::from(potential_move.end_file)][usize::from(potential_move.end_rank)].piece_colour {
+        return false; //Checks the player isn't taking their own pieces
+    }
+
+
+
+    return true;
+}
+#[derive(Clone, Copy)]
+struct PieceMove {
+    start_rank: u8,
+    start_file: u8,
+    end_rank: u8,
+    end_file: u8,
+}
+#[derive(Clone)]
 struct BoardState {
     current_player: BoardColours,
     tiles: Vec<Vec<TileState>>,
-}
-enum EnterMoveState {
-    Letter1,
-    Number1,
-    Letter2,
-    Number2,
 }
 #[derive(Clone, Copy)]
 struct TileState {
     piece: Option<Pieces>,
     piece_colour: BoardColours,
 }
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 enum BoardColours {
     White,
     Black,
@@ -168,15 +226,16 @@ fn draw_board(board: &BoardState) {
     println!();
     println!("{}", "   White's turn   ".black().on_white());
     print!("{}", " White's move:".black().on_white());
+    std::io::stdout().flush().unwrap();
 }
 
 fn to_piece_name(tile: &TileState, colour: BoardColours) -> ColoredString {
     let mut tile_text: String = match tile.piece {
         Some(_) => match tile.piece_colour {
-            BoardColours::White => "W".to_string(),
-            BoardColours::Black => "B".to_string(),
+            BoardColours::White => "w".to_string(),
+            BoardColours::Black => "b".to_string(),
         },
-        None => (" ".to_string()),
+        None => " ".to_string(),
     };
 
     tile_text.push(match &tile.piece {
@@ -206,14 +265,4 @@ fn to_piece_name(tile: &TileState, colour: BoardColours) -> ColoredString {
 fn to_letter(number: u8) -> String {
     let buffer: Vec<u8> = [number + 96].to_vec();
     String::from_utf8(buffer).expect("invalid utf-8 sequence")
-}
-fn from_letter(char: String) -> u8 {
-    if char.len().gt(&usize::from(u8::from(1))) {
-        panic!("from_letter cannot handle strings of length > 1");
-    } else {
-        64 + *(char
-            .as_bytes()
-            .first()
-            .expect("from_letter enountered an error converting char to u8"))
-    }
 }
