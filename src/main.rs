@@ -132,28 +132,33 @@ fn validate_and_play(potential_move: PieceMove, board: &mut BoardState, turn_cou
     }
 }
 fn move_piece(intended_move: PieceMove, board: &mut BoardState, turn_count: &i32) {
-    match board.tiles[usize::from(intended_move.end_file)][usize::from(intended_move.end_rank)].piece {
-        Some(piece) => {
-            match piece {
-                Pieces::EnPassant(ep_turn_count) => {
-                    if ep_turn_count + 1 == *turn_count {
-                        match board.current_player {
-                            BoardColours::White => {
-                                board.tiles[usize::from(intended_move.end_file)][usize::from(intended_move.end_rank) + 1].piece = None;
-                            },
-                            BoardColours::Black => {
-                                board.tiles[usize::from(intended_move.end_file)][usize::from(intended_move.end_rank) - 1].piece = None;
-                            },
+    match board.tiles[usize::from(intended_move.end_file)][usize::from(intended_move.end_rank)]
+        .piece
+    {
+        Some(piece) => match piece {
+            Pieces::EnPassant(ep_turn_count) => {
+                if ep_turn_count + 1 == *turn_count {
+                    match board.current_player {
+                        BoardColours::Black => {
+                            board.tiles[usize::from(intended_move.end_file)]
+                                [usize::from(intended_move.end_rank) + 1]
+                                .piece = None;
+                        }
+                        BoardColours::White => {
+                            board.tiles[usize::from(intended_move.end_file)]
+                                [usize::from(intended_move.end_rank) - 1]
+                                .piece = None;
                         }
                     }
-                    board.tiles[usize::from(intended_move.end_file)][usize::from(intended_move.end_rank)].piece = None;
-                },
-                _default => (),
+                }
+                board.tiles[usize::from(intended_move.end_file)]
+                    [usize::from(intended_move.end_rank)]
+                .piece = None;
             }
-        }
+            _default => (),
+        },
         None => (),
     }
-
 
     board.tiles[usize::from(intended_move.end_file)][usize::from(intended_move.end_rank)] =
         board.tiles[usize::from(intended_move.start_file)][usize::from(intended_move.start_rank)];
@@ -186,7 +191,10 @@ fn validate_move(potential_move: PieceMove, board: &mut BoardState, turn_count: 
         .piece_colour
         == board.tiles[usize::from(potential_move.end_file)][usize::from(potential_move.end_rank)]
             .piece_colour
-        && match board.tiles[usize::from(potential_move.end_file)][usize::from(potential_move.end_rank)].piece {
+        && match board.tiles[usize::from(potential_move.end_file)]
+            [usize::from(potential_move.end_rank)]
+        .piece
+        {
             Some(piece) => match piece {
                 Pieces::EnPassant(_) => false,
                 _default => true,
@@ -227,10 +235,26 @@ fn validate_knight(potential_move: PieceMove, board: &BoardState) -> bool {
     todo!();
 }
 fn validate_bishop(potential_move: PieceMove, board: &BoardState) -> bool {
-    todo!();
+    if i32::from(potential_move.start_file) - i32::from(potential_move.start_rank)
+        == i32::from(potential_move.end_file - potential_move.end_rank)
+        || i32::from(potential_move.start_file) + i32::from(potential_move.start_rank)
+            == i32::from(potential_move.end_file + potential_move.end_rank)
+    {
+        true
+    } else {
+        false
+    }
 }
 fn validate_rook(potential_move: PieceMove, board: &BoardState) -> bool {
-    todo!();
+    if potential_move.start_file == potential_move.end_file {
+        todo!(); //Check for "jump overs"
+        true
+    } else if potential_move.start_rank == potential_move.end_rank {
+        todo!(); //Check for "jump overs"
+        true
+    } else {
+        false
+    }
 }
 fn validate_pawn(potential_move: PieceMove, board: &mut BoardState, turn_count: &i32) -> bool {
     let is_taking = match board.tiles[usize::from(potential_move.end_file)]
@@ -254,20 +278,30 @@ fn validate_pawn(potential_move: PieceMove, board: &mut BoardState, turn_count: 
                 i16::from(potential_move.start_rank) - i16::from(potential_move.end_rank) == 1;
 
             if i16::from(potential_move.start_rank) - i16::from(potential_move.end_rank) == 2
-                    && potential_move.start_rank == 6 {
-                        correct_rank = true;
-                        board.tiles[usize::from(potential_move.start_file)][usize::from(potential_move.start_rank - 1)].piece = Some(Pieces::EnPassant(*turn_count));
-                    }
+                && potential_move.start_rank == 6 && board.tiles[usize::from(potential_move.start_file)]
+                [usize::from(potential_move.start_rank - 1)]
+            .piece.is_none()
+            {
+                correct_rank = true;
+                board.tiles[usize::from(potential_move.start_file)]
+                    [usize::from(potential_move.start_rank - 1)]
+                .piece = Some(Pieces::EnPassant(*turn_count));
+            }
         }
         BoardColours::Black => {
             correct_rank =
                 i16::from(potential_move.end_rank) - i16::from(potential_move.start_rank) == 1;
 
             if i16::from(potential_move.end_rank) - i16::from(potential_move.start_rank) == 2
-                    && potential_move.start_rank == 1 {
-                        correct_rank = true;
-                        board.tiles[usize::from(potential_move.start_file)][usize::from(potential_move.start_rank + 1)].piece = Some(Pieces::EnPassant(*turn_count));
-                    }
+                && potential_move.start_rank == 1 && board.tiles[usize::from(potential_move.start_file)]
+                [usize::from(potential_move.start_rank + 1)]
+            .piece.is_none()
+            {
+                correct_rank = true;
+                board.tiles[usize::from(potential_move.start_file)]
+                    [usize::from(potential_move.start_rank + 1)]
+                .piece = Some(Pieces::EnPassant(*turn_count));
+            }
         }
     };
     correct_file && correct_rank
