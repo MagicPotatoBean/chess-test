@@ -2,7 +2,7 @@ use std::io::Write;
 
 use colored::{ColoredString, Colorize};
 fn main() {
-    let mut board: BoardState = start_board();
+    let mut board: BoardState = start_board(BoardColours::White.invert());
     let mut current_move: PieceMove = PieceMove {
         start_rank: 0,
         start_file: 0,
@@ -10,8 +10,9 @@ fn main() {
         end_file: 0,
     };
     let mut turn_count: i32 = 0;
-    draw_board(&start_board());
     loop {
+        draw_board(&board, board.current_player.invert());
+
         let mut line: String = String::default();
         std::io::stdin().read_line(&mut line).unwrap();
         if line.len().eq(&usize::from(u8::from(6))) {
@@ -43,6 +44,9 @@ fn main() {
             }
             if success {
                 println!();
+                /*if view_board_as == BoardColours::Black {
+                    current_move.rotate_self();
+                }*/
                 validate_and_play(current_move, &mut board, &turn_count);
                 turn_count += 1;
             } else {
@@ -54,17 +58,18 @@ fn main() {
             println!("Invalid move code length");
         }
         println!();
-        draw_board(&board);
     }
 }
-fn start_board() -> BoardState {
+fn start_board(as_player: BoardColours) -> BoardState {
     let blank_row: TileState = TileState {
         piece: None,
         piece_colour: BoardColours::Black,
     };
     let mut state: BoardState = BoardState {
-        current_player: BoardColours::Black,
+        current_player: as_player,
         tiles: vec![vec![blank_row; 8]; 8],
+        white_can_castle: false,
+        black_can_castle: false,
     };
     state.tiles[0][0].piece = Some(Pieces::Rook);
     state.tiles[1][0].piece = Some(Pieces::Knight);
@@ -187,7 +192,7 @@ fn validate_move(potential_move: PieceMove, board: &mut BoardState, turn_count: 
         .piece_colour
         != board.current_player
     {
-        println!("You move your opponent's pieces");
+        println!("You cant move your opponent's pieces");
         return false; //Checks the moved piece belong to the player
     }
     if board.tiles[usize::from(potential_move.start_file)][usize::from(potential_move.start_rank)]
@@ -203,7 +208,7 @@ fn validate_move(potential_move: PieceMove, board: &mut BoardState, turn_count: 
                 _default => {
                     println!("You cannot take your own pieces");
                     true
-                },
+                }
             },
             None => false,
         }
@@ -221,7 +226,7 @@ fn validate_move(potential_move: PieceMove, board: &mut BoardState, turn_count: 
             Pieces::Knight => validate_knight(potential_move),
             Pieces::Bishop => validate_bishop(potential_move, board),
             Pieces::Queen => validate_queen(potential_move, board),
-            Pieces::King => validate_king(potential_move),
+            Pieces::King => validate_king(potential_move, board),
             Pieces::EnPassant(_) => false,
         },
         None => false,
@@ -231,15 +236,27 @@ fn validate_move(potential_move: PieceMove, board: &mut BoardState, turn_count: 
 
     return true;
 }
-fn validate_king(potential_move: PieceMove) -> bool {
+fn validate_king(potential_move: PieceMove, board: &mut BoardState) -> bool {
     if (potential_move.start_file.abs_diff(potential_move.end_file) == 1
         || potential_move.start_file.abs_diff(potential_move.end_file) == 0)
         && (potential_move.start_rank.abs_diff(potential_move.end_rank) == 1
             || potential_move.start_rank.abs_diff(potential_move.end_rank) == 0)
     {
-        println!("You cannot move a king in this way");
+        match board.current_player {
+            BoardColours::White => {
+                board.white_can_castle = false;
+            }
+            BoardColours::Black => {
+                board.black_can_castle = false;
+            }
+        }
         true
     } else {
+        match board.current_player {
+            BoardColours::White => if board.white_can_castle {},
+            BoardColours::Black => if board.black_can_castle {},
+        };
+        println!("You cannot move a king in this way");
         false
     }
 }
@@ -384,14 +401,10 @@ fn validate_pawn(potential_move: PieceMove, board: &mut BoardState, turn_count: 
     .piece
     {
         Some(piece) => match piece {
-            Pieces::EnPassant(_) => {
-                false
-            },
+            Pieces::EnPassant(_) => false,
             _default => true,
         },
-        None => {
-            false
-        },
+        None => false,
     };
     let correct_file: bool;
     let mut correct_rank: bool;
@@ -458,10 +471,28 @@ struct PieceMove {
     end_rank: u8,
     end_file: u8,
 }
+impl PieceMove {
+    fn rotate_self(&mut self) {
+        self.end_file = 7 - self.end_file;
+        self.end_rank = 7 - self.end_rank;
+        self.start_file = 7 - self.start_file;
+        self.start_rank = 7 - self.start_rank;
+    }
+    fn create_rotated(&self) -> Self {
+        PieceMove {
+            end_file: 7 - self.end_file,
+            end_rank: 7 - self.end_rank,
+            start_file: 7 - self.start_file,
+            start_rank: 7 - self.start_rank,
+        }
+    }
+}
 #[derive(Clone)]
 struct BoardState {
     current_player: BoardColours,
     tiles: Vec<Vec<TileState>>,
+    white_can_castle: bool,
+    black_can_castle: bool,
 }
 impl BoardState {
     fn get_tile(&self, x: usize, y: usize) -> &TileState {
@@ -498,6 +529,14 @@ enum BoardColours {
     White,
     Black,
 }
+impl BoardColours {
+    fn invert(&self) -> BoardColours {
+        match &self {
+            BoardColours::White => BoardColours::Black,
+            BoardColours::Black => BoardColours::White,
+        }
+    }
+}
 #[derive(Clone, Copy)]
 enum Pieces {
     Pawn,
@@ -508,38 +547,75 @@ enum Pieces {
     King,
     EnPassant(i32),
 }
-fn draw_board(board: &BoardState) {
-    let mut y: i8 = 8;
-    let mut x: i8;
-    while y >= 0 {
-        x = 0;
-        while x <= 8 {
-            if x == 0 {
-                if y == 0 {
-                    print!("  ");
+fn draw_board(board: &BoardState, as_player: BoardColours) {
+    if as_player == BoardColours::White {
+        let mut y: i8 = 8;
+        let mut x: i8;
+        while y >= 0 {
+            x = 0;
+            while x <= 8 {
+                if x == 0 {
+                    if y == 0 {
+                        print!("  ");
+                    } else {
+                        print!("{} ", y);
+                    }
+                } else if y == 0 {
+                    print!("{} ", to_letter((x).unsigned_abs()));
                 } else {
-                    print!("{} ", y);
-                }
-            } else if y == 0 {
-                print!("{} ", to_letter(x.unsigned_abs()));
-            } else {
-                print!(
-                    "{}",
-                    to_piece_name(
-                        &board.tiles[usize::try_from(x.clone() - 1).expect("index out of bounds")]
-                            [usize::try_from(y.clone() - 1).expect("index out of bounds")],
-                        if (x + y) % 2 == 1 {
-                            BoardColours::Black
-                        } else {
-                            BoardColours::White
-                        }
+                    print!(
+                        "{}",
+                        to_piece_name(
+                            &board.tiles
+                                [usize::try_from(x.clone() - 1).expect("index out of bounds")]
+                                [usize::try_from(y.clone() - 1).expect("index out of bounds")],
+                            if (x + y) % 2 == 1 {
+                                BoardColours::Black
+                            } else {
+                                BoardColours::White
+                            }
+                        )
                     )
-                )
+                }
+                x += 1;
             }
-            x += 1;
+            println!();
+            y -= 1;
         }
-        println!();
-        y -= 1;
+    } else {
+        let mut y: i8 = 0;
+        let mut x: i8;
+        while y <= 8 {
+            x = 8;
+            while x >= 0 {
+                if x == 0 {
+                    if y == 0 {
+                        print!("  ");
+                    } else {
+                        print!("{} ", y);
+                    }
+                } else if y == 0 {
+                    print!("{} ", to_letter(x.unsigned_abs()));
+                } else {
+                    print!(
+                        "{}",
+                        to_piece_name(
+                            &board.tiles
+                                [usize::try_from(x.clone() - 1).expect("index out of bounds")]
+                                [usize::try_from(y.clone() - 1).expect("index out of bounds")],
+                            if (x + y) % 2 == 1 {
+                                BoardColours::Black
+                            } else {
+                                BoardColours::White
+                            }
+                        )
+                    )
+                }
+                x -= 1;
+            }
+            println!();
+            y += 1;
+        }
     }
     println!();
     match board.current_player {
