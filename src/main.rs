@@ -1,8 +1,8 @@
+mod networking;
 use std::io::Write;
-
 use colored::{ColoredString, Colorize};
 fn main() {
-    let mut board: BoardState = start_board(BoardColours::White.invert());
+    let mut board: BoardState = start_board(BoardColours::White);
     let mut current_move: PieceMove = PieceMove {
         start_rank: 0,
         start_file: 0,
@@ -66,7 +66,7 @@ fn start_board(as_player: BoardColours) -> BoardState {
         piece_colour: BoardColours::Black,
     };
     let mut state: BoardState = BoardState {
-        current_player: as_player,
+        current_player: as_player.invert(),
         tiles: vec![vec![blank_row; 8]; 8],
         white_can_castle: false,
         black_can_castle: false,
@@ -455,7 +455,7 @@ fn validate_pawn(potential_move: PieceMove, board: &mut BoardState, turn_count: 
             println!("You have to move forward one or two spaces with a pawn.");
             false
         } else if correct_rank {
-            println!("You can only take diagonnally");
+            println!("You can only take diagonally");
             false
         } else {
             println!("You have to move forward one or two spaces with a pawn, can only take diagonally, and move forward normally");
@@ -588,21 +588,21 @@ fn draw_board(board: &BoardState, as_player: BoardColours) {
         while y <= 8 {
             x = 8;
             while x >= 0 {
-                if x == 0 {
-                    if y == 0 {
+                if x == 8 {
+                    if y == 8 {
                         print!("  ");
                     } else {
-                        print!("{} ", y);
+                        print!("{} ", y + 1);
                     }
-                } else if y == 0 {
-                    print!("{} ", to_letter(x.unsigned_abs()));
+                } else if y == 8 {
+                    print!("{} ", to_letter(x.unsigned_abs() + 1));
                 } else {
                     print!(
                         "{}",
                         to_piece_name(
                             &board.tiles
-                                [usize::try_from(x.clone() - 1).expect("index out of bounds")]
-                                [usize::try_from(y.clone() - 1).expect("index out of bounds")],
+                                [usize::try_from(x.clone()).expect("index out of bounds")]
+                                [usize::try_from(y.clone()).expect("index out of bounds")],
                             if (x + y) % 2 == 1 {
                                 BoardColours::Black
                             } else {

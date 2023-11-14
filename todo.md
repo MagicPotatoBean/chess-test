@@ -1,8 +1,9 @@
-# to-do
+# todo.md
+## to-do
 - check checking
 - checkmate checking
-# doing
 - castling
+## doing
 - networking
+## done
 - correctly rotate board between moves
-# done
