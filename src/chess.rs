@@ -9,15 +9,19 @@ pub fn main() {
         end_file: 0,
     };
     let mut turn_count: i32 = 0;
+    println!("Type \"exit\" to leave the game.");
     loop {
         draw_board(&board, board.current_player.invert());
 
         let mut line: String = String::default();
         std::io::stdin().read_line(&mut line).unwrap();
+        if line.to_lowercase() == "exit" {
+            println!("Returning to menu");
+        }
         if line.len().eq(&usize::from(u8::from(6))) {
             let bytes: Vec<u8> = line.as_bytes().to_ascii_uppercase();
             let mut success: bool = true;
-            if 64 <= bytes[0] && bytes[0] <= 71 {
+            if 64 <= bytes[0] && bytes[0] <= 72 {
                 current_move.start_file = bytes[0] - 65;
                 //println!("{}", bytes[0] - 65);
             } else {
@@ -29,7 +33,7 @@ pub fn main() {
             } else {
                 success = false;
             }
-            if 64 <= bytes[2] && bytes[2] <= 71 {
+            if 64 <= bytes[2] && bytes[2] <= 72 {
                 current_move.end_file = bytes[2] - 65;
                 //println!("{}", bytes[2] - 65);
             } else {
@@ -273,9 +277,9 @@ fn validate_knight(potential_move: PieceMove) -> bool {
         || (potential_move.start_file.abs_diff(potential_move.end_file) == 1
             && potential_move.start_rank.abs_diff(potential_move.end_rank) == 2)
     {
-        println!("You cannot move a knight in this way");
         true
     } else {
+        println!("You cannot move a knight in this way");
         false
     }
 }
@@ -469,22 +473,6 @@ struct PieceMove {
     start_file: u8,
     end_rank: u8,
     end_file: u8,
-}
-impl PieceMove {
-    fn rotate_self(&mut self) {
-        self.end_file = 7 - self.end_file;
-        self.end_rank = 7 - self.end_rank;
-        self.start_file = 7 - self.start_file;
-        self.start_rank = 7 - self.start_rank;
-    }
-    fn create_rotated(&self) -> Self {
-        PieceMove {
-            end_file: 7 - self.end_file,
-            end_rank: 7 - self.end_rank,
-            start_file: 7 - self.start_file,
-            start_rank: 7 - self.start_rank,
-        }
-    }
 }
 #[derive(Clone)]
 struct BoardState {
