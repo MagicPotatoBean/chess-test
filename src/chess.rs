@@ -2,6 +2,7 @@ use colored::{ColoredString, Colorize};
 use std::io::Write;
 pub fn main() {
     let mut board: BoardState = start_board(BoardColours::White);
+    let mut sequence: Vec<String> = Vec::new();
     let mut current_move: PieceMove = PieceMove {
         start_rank: 0,
         start_file: 0,
@@ -9,16 +10,28 @@ pub fn main() {
         end_file: 0,
     };
     let mut turn_count: i32 = 0;
-    println!("Type \"exit\" to leave the game.");
+    println!();
+    println!("Type \"{}\" to leave the game.", "exit".red());
+    println!("Type \"{}\" to get the history of the game.", "history".red());
+    println!();
     loop {
         draw_board(&board, board.current_player.invert());
 
         let mut line: String = String::default();
         std::io::stdin().read_line(&mut line).unwrap();
+        line = line.trim().to_owned();
         if line.to_lowercase() == "exit" {
             println!("Returning to menu");
-        }
-        if line.len().eq(&usize::from(u8::from(6))) {
+            return;
+        } else if line.to_lowercase() == "history" {
+            println!();
+            println!("History: ");
+            for line in &sequence {
+                println!("{}", line);
+            }
+            println!("End of history.");
+            println!();
+        } else if line.len().eq(&usize::from(u8::from(4))) {
             let bytes: Vec<u8> = line.as_bytes().to_ascii_uppercase();
             let mut success: bool = true;
             if 64 <= bytes[0] && bytes[0] <= 72 {
@@ -46,6 +59,7 @@ pub fn main() {
                 success = false;
             }
             if success {
+                sequence.push(line.to_owned());
                 println!();
                 /*if view_board_as == BoardColours::Black {
                     current_move.rotate_self();
@@ -259,24 +273,30 @@ fn validate_king(potential_move: PieceMove, board: &mut BoardState) -> bool {
         }
         true
     } else {
-        match board.current_player {
+        match board.current_player.invert() { //No clue why but this needs to be inverted :)
             BoardColours::White => {
-                println!("Checking for castle");
                 if board.white_can_king_side_castle && potential_move.end_file == 1 && potential_move.end_rank == 0 && !board.get_tile(1, 0).is_physical() && !board.get_tile(2, 0).is_physical() {
-                    println!("White king side castle");
+                    board.set_tile(2,0, board.get_owned_tile(0, 0)); // Move rook
+                    board.set_tile(0, 0, TileState { piece: None, piece_colour: BoardColours::White }); // Delete rook
+                    return true;
                 } else if board.white_can_queen_side_castle && potential_move.end_file == 5 && potential_move.end_rank == 0 && !board.get_tile(4, 0).is_physical() && !board.get_tile(5, 0).is_physical() && !board.get_tile(6, 0).is_physical()  {
-                    println!("White queen side castle");
+                    board.set_tile(5,0, board.get_owned_tile(3, 0)); // Move rook
+                    board.set_tile(8, 0, TileState { piece: None, piece_colour: BoardColours::White }); // Delete rook
+                    return true;
                 }
             },
             BoardColours::Black => {
-                println!("Checking for castle");
                 if board.black_can_king_side_castle && potential_move.end_file == 1 && potential_move.end_rank == 7 && !board.get_tile(1, 7).is_physical() && !board.get_tile(2, 7).is_physical() {
-                    println!("Black king side castle");
+                    board.set_tile(2,7, board.get_owned_tile(0, 7)); // Move rook
+                    board.set_tile(0, 7, TileState { piece: None, piece_colour: BoardColours::White }); // Delete rook
+                    return true;
                 } else if board.black_can_queen_side_castle && potential_move.end_file == 5 && potential_move.end_rank == 7 && !board.get_tile(4, 7).is_physical() && !board.get_tile(5, 7).is_physical() && !board.get_tile(6, 7).is_physical() {
-                    println!("Black queen side castle");
+                    board.set_tile(5,7, board.get_owned_tile(7, 7)); // Move rook
+                    board.set_tile(8, 7, TileState { piece: None, piece_colour: BoardColours::White }); // Delete rook
+                    return true;
                 }
             },
-        };
+        }
         println!("You cannot move a king in this way");
         false
     }
@@ -505,6 +525,21 @@ impl BoardState {
     fn get_tile(&self, file: usize, rank: usize) -> &TileState {
         &self.tiles[file][rank]
     }
+    fn get_owned_tile(&self, file: usize, rank: usize) -> TileState {
+        (&self.copy()).tiles[file][rank]
+    }
+    fn set_tile(&mut self, file: usize, rank: usize, tile: TileState) {
+        self.tiles[file][rank] = tile;
+    }
+    fn copy(&self) -> BoardState {
+        BoardState { 
+            current_player: self.current_player, 
+            tiles: self.tiles.to_owned(), 
+            white_can_king_side_castle: self.white_can_king_side_castle, 
+            black_can_king_side_castle: self.black_can_king_side_castle, 
+            white_can_queen_side_castle: self.white_can_queen_side_castle, 
+            black_can_queen_side_castle: self.black_can_queen_side_castle }
+    }
 }
 #[derive(Clone, Copy)]
 struct TileState {
@@ -527,9 +562,6 @@ impl TileState {
             None => false,
         }
     }
-    /*fn is_not_physical(&self) -> bool {
-        !&self.is_physical()
-    }*/
 }
 #[derive(Clone, Copy, PartialEq)]
 enum BoardColours {

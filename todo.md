@@ -3,6 +3,8 @@
 - check checking
 - checkmate checking
 - castling
+- save & load move sequences
+- save & load custom gameboards
 ## doing
 - networking
 ## done
