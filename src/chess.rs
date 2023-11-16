@@ -1,5 +1,5 @@
-use std::io::Write;
 use colored::{ColoredString, Colorize};
+use std::io::Write;
 pub fn main() {
     let mut board: BoardState = start_board(BoardColours::White);
     let mut current_move: PieceMove = PieceMove {
@@ -71,8 +71,10 @@ fn start_board(as_player: BoardColours) -> BoardState {
     let mut state: BoardState = BoardState {
         current_player: as_player.invert(),
         tiles: vec![vec![blank_row; 8]; 8],
-        white_can_castle: false,
-        black_can_castle: false,
+        white_can_king_side_castle: true,
+        white_can_queen_side_castle: true,
+        black_can_king_side_castle: true,
+        black_can_queen_side_castle: true,
     };
     state.tiles[0][0].piece = Some(Pieces::Rook);
     state.tiles[1][0].piece = Some(Pieces::Knight);
@@ -247,17 +249,33 @@ fn validate_king(potential_move: PieceMove, board: &mut BoardState) -> bool {
     {
         match board.current_player {
             BoardColours::White => {
-                board.white_can_castle = false;
+                board.white_can_king_side_castle = false;
+                board.white_can_queen_side_castle = false;
             }
             BoardColours::Black => {
-                board.black_can_castle = false;
+                board.black_can_king_side_castle = false;
+                board.black_can_queen_side_castle = false;
             }
         }
         true
     } else {
         match board.current_player {
-            BoardColours::White => if board.white_can_castle {},
-            BoardColours::Black => if board.black_can_castle {},
+            BoardColours::White => {
+                println!("Checking for castle");
+                if board.white_can_king_side_castle && potential_move.end_file == 1 && potential_move.end_rank == 0 && !board.get_tile(1, 0).is_physical() && !board.get_tile(2, 0).is_physical() {
+                    println!("White king side castle");
+                } else if board.white_can_queen_side_castle && potential_move.end_file == 5 && potential_move.end_rank == 0 && !board.get_tile(4, 0).is_physical() && !board.get_tile(5, 0).is_physical() && !board.get_tile(6, 0).is_physical()  {
+                    println!("White queen side castle");
+                }
+            },
+            BoardColours::Black => {
+                println!("Checking for castle");
+                if board.black_can_king_side_castle && potential_move.end_file == 1 && potential_move.end_rank == 7 && !board.get_tile(1, 7).is_physical() && !board.get_tile(2, 7).is_physical() {
+                    println!("Black king side castle");
+                } else if board.black_can_queen_side_castle && potential_move.end_file == 5 && potential_move.end_rank == 7 && !board.get_tile(4, 7).is_physical() && !board.get_tile(5, 7).is_physical() && !board.get_tile(6, 7).is_physical() {
+                    println!("Black queen side castle");
+                }
+            },
         };
         println!("You cannot move a king in this way");
         false
@@ -478,12 +496,14 @@ struct PieceMove {
 struct BoardState {
     current_player: BoardColours,
     tiles: Vec<Vec<TileState>>,
-    white_can_castle: bool,
-    black_can_castle: bool,
+    white_can_king_side_castle: bool,
+    black_can_king_side_castle: bool,
+    white_can_queen_side_castle: bool,
+    black_can_queen_side_castle: bool,
 }
 impl BoardState {
-    fn get_tile(&self, x: usize, y: usize) -> &TileState {
-        &self.tiles[x][y]
+    fn get_tile(&self, file: usize, rank: usize) -> &TileState {
+        &self.tiles[file][rank]
     }
 }
 #[derive(Clone, Copy)]
@@ -587,8 +607,7 @@ fn draw_board(board: &BoardState, as_player: BoardColours) {
                     print!(
                         "{}",
                         to_piece_name(
-                            &board.tiles
-                                [usize::try_from(x.clone()).expect("index out of bounds")]
+                            &board.tiles[usize::try_from(x.clone()).expect("index out of bounds")]
                                 [usize::try_from(y.clone()).expect("index out of bounds")],
                             if (x + y) % 2 == 1 {
                                 BoardColours::Black
