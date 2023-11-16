@@ -265,9 +265,9 @@ fn validate_king(potential_move: PieceMove, board: &mut BoardState) -> bool {
 }
 fn validate_queen(potential_move: PieceMove, board: &BoardState) -> bool {
     if !has_jumped_over(potential_move, board, true, true) {
-        println!("You cannot move a queen in this way");
         true
     } else {
+        println!("You cannot move a queen in this way");
         false
     }
 }
@@ -285,17 +285,17 @@ fn validate_knight(potential_move: PieceMove) -> bool {
 }
 fn validate_bishop(potential_move: PieceMove, board: &BoardState) -> bool {
     if !has_jumped_over(potential_move, board, false, true) {
-        println!("You cannot move a bishop in this way");
         true
     } else {
+        println!("You cannot move a bishop in this way");
         false
     }
 }
 fn validate_rook(potential_move: PieceMove, board: &BoardState) -> bool {
     if !has_jumped_over(potential_move, board, true, false) {
-        println!("You cannot move a rook in this way");
         true
     } else {
+        println!("You cannot move a rook in this way");
         false
     }
 }
@@ -357,7 +357,7 @@ fn has_jumped_over(
             == i32::from(potential_move.end_file) + i32::from(potential_move.end_rank))
         && allow_diagonal
     {
-        // y=x diagonal
+        // y=x, or y=-x diagonal
         let x_step: i8;
         let y_step: i8;
         let low_x: i16;
