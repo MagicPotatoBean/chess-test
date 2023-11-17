@@ -5,6 +5,7 @@
 - save & load move sequences
 - networking
 ## doing
+- save en passant turn value & turn value in save file
 ## done
 - save & load custom gameboards
 - display history

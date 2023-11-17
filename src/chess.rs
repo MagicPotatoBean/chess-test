@@ -1,8 +1,5 @@
 use colored::{ColoredString, Colorize};
-use std::{
-    io::{Error, Write},
-    string,
-};
+ use std::io::Write;
 pub fn main() {
     let mut board: BoardState = start_board(BoardColours::White);
     let mut sequence: Vec<String> = Vec::new();
@@ -831,19 +828,6 @@ enum Pieces {
     King,
     EnPassant(i32),
 }
-impl Pieces {
-    fn to_char(&self) -> char {
-        match self {
-            Pieces::Pawn => 'P',
-            Pieces::Rook => 'R',
-            Pieces::Knight => 'N',
-            Pieces::Bishop => 'B',
-            Pieces::Queen => 'Q',
-            Pieces::King => 'K',
-            Pieces::EnPassant(_) => ' ',
-        }
-    }
-}
 fn draw_board(board: &BoardState, as_player: BoardColours) {
     if as_player == BoardColours::Black {
         let mut y: i8 = 8;
@@ -928,7 +912,7 @@ fn draw_board(board: &BoardState, as_player: BoardColours) {
 }
 
 fn to_piece_name(tile: &TileState, colour: BoardColours) -> ColoredString {
-    let mut tile_text: String = tile.to_string();
+    let tile_text: String = tile.to_string();
     let colored_text: ColoredString;
     return match colour {
         BoardColours::White => {
