@@ -13,6 +13,7 @@ pub fn main() {
     println!();
     println!("Type \"{}\" to leave the game.", "exit".red());
     println!("Type \"{}\" to get the history of the game.", "history".red());
+    println!("Type \"{}\" to restart the game.", "reset".red());
     println!();
     loop {
         draw_board(&board, board.current_player.invert());
@@ -31,6 +32,9 @@ pub fn main() {
             }
             println!("End of history.");
             println!();
+        } else if line.to_lowercase() == "reset" {
+            sequence = Vec::new();
+            board = start_board(BoardColours::White);
         } else if line.len().eq(&usize::from(u8::from(4))) {
             let bytes: Vec<u8> = line.as_bytes().to_ascii_uppercase();
             let mut success: bool = true;
