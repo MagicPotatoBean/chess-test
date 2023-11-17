@@ -6,8 +6,9 @@
 - save & load custom gameboards
 - networking
 ## doing
-- add "are you sure" to exit & reset
 ## done
+- display history
+- add "are you sure" to exit & reset
 - reset
 - castling
 - correctly rotate board between moves

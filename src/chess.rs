@@ -1,5 +1,5 @@
 use colored::{ColoredString, Colorize};
-use std::io::Write;
+use std::{io::{Write, Error}, string};
 pub fn main() {
     let mut board: BoardState = start_board(BoardColours::White);
     let mut sequence: Vec<String> = Vec::new();
@@ -17,6 +17,8 @@ pub fn main() {
         "history".red()
     );
     println!("Type \"{}\" to restart the game.", "reset".red());
+    println!("Type \"{}\" to save the state of the board.", "save".red());
+    println!("Type \"{}\" to load the state of the board.", "load".red());
     println!();
     loop {
         draw_board(&board, board.current_player.invert());
@@ -42,6 +44,8 @@ pub fn main() {
                 sequence = Vec::new();
                 board = start_board(BoardColours::White);
             }
+        } else if line.to_lowercase() == "save" {
+            let _ = std::fs::write("C:/Users/terra/downloads/test.txt", board.to_string());
         } else if line.len().eq(&usize::from(u8::from(4))) {
             let bytes: Vec<u8> = line.as_bytes().to_ascii_uppercase();
             let mut success: bool = true;
@@ -610,6 +614,27 @@ impl BoardState {
             black_can_queen_side_castle: self.black_can_queen_side_castle,
         }
     }
+    fn to_string(&self) -> String {
+        let mut result: String = String::default();
+        for y in 0..7usize {
+            for x in 0..7usize {
+                result.push_str(
+                    &self
+                        .get_tile(usize::from(x), usize::from(y))
+                        .to_string(),
+                );
+            }
+        }
+        result
+    }
+    /*fn from_string(&mut self, serialised_board: String) {
+        for y in 0..7usize {
+            for x in 0..7usize {
+                    let string_section = serialised_board.get(i)
+                    &self.set_tile(usize::from(x), usize::from(y), TileState::new().from_string("wP"));
+            }
+        }
+    }*/
 }
 #[derive(Clone, Copy)]
 struct TileState {
@@ -632,6 +657,71 @@ impl TileState {
             None => false,
         }
     }
+    fn to_string(&self) -> String {
+        let mut result: String = String::default();
+        let mut display_colour = true;
+        let piece_name = match self.piece {
+            Some(piece) => match piece {
+                Pieces::Pawn => 'P',
+                Pieces::Rook => 'R',
+                Pieces::Knight => 'N',
+                Pieces::Bishop => 'B',
+                Pieces::Queen => 'Q',
+                Pieces::King => 'K',
+                Pieces::EnPassant(_) => {
+                    display_colour = false;
+                    ' '
+                }
+            },
+            None => {
+                display_colour = false;
+                ' '
+            },
+        };
+        result.push(if display_colour { self.piece_colour.to_char() } else { ' ' });
+        result.push(piece_name);
+        result
+    }
+    fn from_string(&self, serialised_tilestate: String) -> TileState {
+        let mut vec_form = Vec::from(serialised_tilestate);
+        let mut new_tilestate = TileState {
+            piece: match vec_form.pop().expect("Passed vector was empty").to_string().as_str() {
+                "R" => {
+                    Some(Pieces::Rook)
+                },
+                "N" => {
+                    Some(Pieces::Knight)
+                },
+                "B" => {
+                    Some(Pieces::Bishop)
+                },
+                "K" => {
+                    Some(Pieces::King)
+                },
+                "Q" => {
+                    Some(Pieces::Queen)
+                },
+                "P" => {
+                    Some(Pieces::Pawn)
+                },
+                _ => {
+                    None
+                }
+            },
+            piece_colour: match vec_form.pop().expect("Passed vector had only one item").to_string().as_str() {
+                "b" => {
+                    BoardColours::Black
+                },
+                _ => {
+                    BoardColours::White
+                }
+            },
+        };
+        return new_tilestate
+    }
+    fn new() -> TileState {
+        TileState { piece: None, piece_colour: BoardColours::White }
+    }
 }
 #[derive(Clone, Copy, PartialEq)]
 enum BoardColours {
@@ -645,6 +735,12 @@ impl BoardColours {
             BoardColours::Black => BoardColours::White,
         }
     }
+    fn to_char(&self) -> char {
+        match self {
+            BoardColours::White => 'w',
+            BoardColours::Black => 'b',
+        }
+    }
 }
 #[derive(Clone, Copy)]
 enum Pieces {
@@ -655,6 +751,19 @@ enum Pieces {
     Queen,
     King,
     EnPassant(i32),
+}
+impl Pieces {
+    fn to_char(&self) -> char {
+        match self {
+            Pieces::Pawn => 'P',
+            Pieces::Rook => 'R',
+            Pieces::Knight => 'N',
+            Pieces::Bishop => 'B',
+            Pieces::Queen => 'Q',
+            Pieces::King => 'K',
+            Pieces::EnPassant(_) => ' ',
+        }
+    }
 }
 fn draw_board(board: &BoardState, as_player: BoardColours) {
     if as_player == BoardColours::White {
@@ -740,7 +849,8 @@ fn draw_board(board: &BoardState, as_player: BoardColours) {
 }
 
 fn to_piece_name(tile: &TileState, colour: BoardColours) -> ColoredString {
-    let mut tile_text: String = match tile.piece {
+    let mut tile_text: String = tile.to_string();
+    /*match tile.piece {
         Some(piece) => match tile.piece_colour {
             BoardColours::Black => match piece {
                 Pieces::EnPassant(_) => " ".to_string(), // 'E' for testing, ' ' for release
@@ -765,7 +875,7 @@ fn to_piece_name(tile: &TileState, colour: BoardColours) -> ColoredString {
             Pieces::EnPassant(_) => ' ', // 'n' for testing, ' ' for release
         },
         None => ' ',
-    });
+    });*/
     let colored_text: ColoredString;
     return match colour {
         BoardColours::Black => {
