@@ -3,10 +3,10 @@
 - check checking
 - checkmate checking
 - save & load move sequences
-- save & load custom gameboards
 - networking
 ## doing
 ## done
+- save & load custom gameboards
 - display history
 - add "are you sure" to exit & reset
 - reset

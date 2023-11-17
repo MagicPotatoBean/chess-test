@@ -1,5 +1,8 @@
 use colored::{ColoredString, Colorize};
-use std::{io::{Write, Error}, string};
+use std::{
+    io::{Error, Write},
+    string,
+};
 pub fn main() {
     let mut board: BoardState = start_board(BoardColours::White);
     let mut sequence: Vec<String> = Vec::new();
@@ -44,8 +47,14 @@ pub fn main() {
                 sequence = Vec::new();
                 board = start_board(BoardColours::White);
             }
-        } else if line.to_lowercase() == "save" {
+        } else if line.to_lowercase() == "save" {   
             let _ = std::fs::write("C:/Users/terra/downloads/test.txt", board.to_string());
+        } else if line.to_lowercase() == "load" {
+            let file_data = std::fs::read_to_string("C:/Users/terra/downloads/test.txt");
+            match file_data {
+                Ok(string_data) => board.from_string(string_data),
+                Err(_) => println!("{}", "Failed to load file.".red()),
+            }
         } else if line.len().eq(&usize::from(u8::from(4))) {
             let bytes: Vec<u8> = line.as_bytes().to_ascii_uppercase();
             let mut success: bool = true;
@@ -102,10 +111,10 @@ fn confirm() -> bool {
 fn start_board(as_player: BoardColours) -> BoardState {
     let blank_row: TileState = TileState {
         piece: None,
-        piece_colour: BoardColours::Black,
+        piece_colour: BoardColours::White,
     };
     let mut state: BoardState = BoardState {
-        current_player: as_player.invert(),
+        current_player: as_player,
         tiles: vec![vec![blank_row; 8]; 8],
         white_can_king_side_castle: true,
         white_can_queen_side_castle: true,
@@ -139,14 +148,14 @@ fn start_board(as_player: BoardColours) -> BoardState {
     state.tiles[6][7].piece = Some(Pieces::Knight);
     state.tiles[7][7].piece = Some(Pieces::Rook);
 
-    state.tiles[0][7].piece_colour = BoardColours::White;
-    state.tiles[1][7].piece_colour = BoardColours::White;
-    state.tiles[2][7].piece_colour = BoardColours::White;
-    state.tiles[3][7].piece_colour = BoardColours::White;
-    state.tiles[4][7].piece_colour = BoardColours::White;
-    state.tiles[5][7].piece_colour = BoardColours::White;
-    state.tiles[6][7].piece_colour = BoardColours::White;
-    state.tiles[7][7].piece_colour = BoardColours::White;
+    state.tiles[0][7].piece_colour = BoardColours::Black;
+    state.tiles[1][7].piece_colour = BoardColours::Black;
+    state.tiles[2][7].piece_colour = BoardColours::Black;
+    state.tiles[3][7].piece_colour = BoardColours::Black;
+    state.tiles[4][7].piece_colour = BoardColours::Black;
+    state.tiles[5][7].piece_colour = BoardColours::Black;
+    state.tiles[6][7].piece_colour = BoardColours::Black;
+    state.tiles[7][7].piece_colour = BoardColours::Black;
 
     state.tiles[0][6].piece = Some(Pieces::Pawn);
     state.tiles[1][6].piece = Some(Pieces::Pawn);
@@ -157,14 +166,14 @@ fn start_board(as_player: BoardColours) -> BoardState {
     state.tiles[6][6].piece = Some(Pieces::Pawn);
     state.tiles[7][6].piece = Some(Pieces::Pawn);
 
-    state.tiles[0][6].piece_colour = BoardColours::White;
-    state.tiles[1][6].piece_colour = BoardColours::White;
-    state.tiles[2][6].piece_colour = BoardColours::White;
-    state.tiles[3][6].piece_colour = BoardColours::White;
-    state.tiles[4][6].piece_colour = BoardColours::White;
-    state.tiles[5][6].piece_colour = BoardColours::White;
-    state.tiles[6][6].piece_colour = BoardColours::White;
-    state.tiles[7][6].piece_colour = BoardColours::White;
+    state.tiles[0][6].piece_colour = BoardColours::Black;
+    state.tiles[1][6].piece_colour = BoardColours::Black;
+    state.tiles[2][6].piece_colour = BoardColours::Black;
+    state.tiles[3][6].piece_colour = BoardColours::Black;
+    state.tiles[4][6].piece_colour = BoardColours::Black;
+    state.tiles[5][6].piece_colour = BoardColours::Black;
+    state.tiles[6][6].piece_colour = BoardColours::Black;
+    state.tiles[7][6].piece_colour = BoardColours::Black;
 
     return state;
 }
@@ -527,7 +536,7 @@ fn validate_pawn(potential_move: PieceMove, board: &mut BoardState, turn_count: 
         false => correct_file = potential_move.start_file == potential_move.end_file,
     };
     match board.current_player {
-        BoardColours::White => {
+        BoardColours::Black => {
             correct_rank =
                 i16::from(potential_move.start_rank) - i16::from(potential_move.end_rank) == 1;
 
@@ -544,7 +553,7 @@ fn validate_pawn(potential_move: PieceMove, board: &mut BoardState, turn_count: 
                 .piece = Some(Pieces::EnPassant(*turn_count));
             }
         }
-        BoardColours::Black => {
+        BoardColours::White => {
             correct_rank =
                 i16::from(potential_move.end_rank) - i16::from(potential_move.start_rank) == 1;
 
@@ -616,25 +625,105 @@ impl BoardState {
     }
     fn to_string(&self) -> String {
         let mut result: String = String::default();
-        for y in 0..7usize {
-            for x in 0..7usize {
-                result.push_str(
-                    &self
-                        .get_tile(usize::from(x), usize::from(y))
-                        .to_string(),
-                );
+        for y in 0..=7usize {
+            for x in 0..=7usize {
+                result.push_str(&self.get_tile(usize::from(x), usize::from(y)).to_string());
             }
+        }
+        if self.current_player == BoardColours::Black {
+            result.push('b');
+            result.push('l');
+        } else {
+            result.push('w');
+            result.push('h');
+        }
+        if self.white_can_king_side_castle {
+            result.push('t');
+            result.push('r');
+        } else {
+            result.push('f');
+            result.push('a');
+        }
+        if self.white_can_queen_side_castle {
+            result.push('t');
+            result.push('r');
+        } else {
+            result.push('f');
+            result.push('a');
+        }
+        if self.black_can_king_side_castle {
+            result.push('t');
+            result.push('r');
+        } else {
+            result.push('f');
+            result.push('a');
+        }
+        if self.black_can_queen_side_castle {
+            result.push('t');
+            result.push('r');
+        } else {
+            result.push('f');
+            result.push('a');
         }
         result
     }
-    /*fn from_string(&mut self, serialised_board: String) {
-        for y in 0..7usize {
-            for x in 0..7usize {
-                    let string_section = serialised_board.get(i)
-                    &self.set_tile(usize::from(x), usize::from(y), TileState::new().from_string("wP"));
+    fn from_string(&mut self, serialised_board: String) {
+        let split_string = to_chunks(&serialised_board, 2);
+        for y in 0..=7usize {
+            for x in 0..=7usize {
+                self.set_tile(
+                    usize::from(x),
+                    usize::from(y),
+                    TileState::new()
+                        .from_string(split_string[8 * y + x].to_string()));
             }
         }
-    }*/
+        if split_string[64] == "bl" {
+            self.current_player = BoardColours::Black;
+        } else {
+            self.current_player = BoardColours::White;
+        }
+        if split_string[65] == "tr" {
+            self.white_can_king_side_castle = true;
+        } else {
+            self.white_can_king_side_castle = false;
+        }
+        if split_string[66] == "tr" {
+            self.white_can_queen_side_castle = true;
+        } else {
+            self.white_can_queen_side_castle = false;
+        }
+        if split_string[67] == "tr" {
+            self.black_can_king_side_castle = true;
+        } else {
+            self.black_can_king_side_castle = false;
+        }
+        if split_string[68] == "tr" {
+            self.black_can_queen_side_castle = true;
+        } else {
+            self.black_can_queen_side_castle = false;
+        }
+    }
+}
+pub fn to_chunks<'a>(owned_string: &'a String, chunk_size: usize) -> Vec<&'a str> {
+    let string: &str = owned_string.as_str();
+    let mut sections = Vec::new();
+    
+    let mut remaining = string;
+    loop {
+        // Get the byte offset of the nth character each time so we can split the string
+        match remaining.char_indices().nth(chunk_size) {
+            Some((offset, _)) => {
+                let (a, b) = remaining.split_at(offset);
+                sections.push(a);
+                remaining = b;
+            },
+            None => {
+                sections.push(remaining);
+                return sections
+            }
+        }
+    }
 }
 #[derive(Clone, Copy)]
 struct TileState {
@@ -676,51 +765,41 @@ impl TileState {
             None => {
                 display_colour = false;
                 ' '
-            },
+            }
         };
-        result.push(if display_colour { self.piece_colour.to_char() } else { ' ' });
+        result.push(if display_colour {
+            self.piece_colour.to_char()
+        } else {
+            ' '
+        });
         result.push(piece_name);
         result
     }
     fn from_string(&self, serialised_tilestate: String) -> TileState {
         let mut vec_form = Vec::from(serialised_tilestate);
-        let mut new_tilestate = TileState {
-            piece: match vec_form.pop().expect("Passed vector was empty").to_string().as_str() {
-                "R" => {
-                    Some(Pieces::Rook)
-                },
-                "N" => {
-                    Some(Pieces::Knight)
-                },
-                "B" => {
-                    Some(Pieces::Bishop)
-                },
-                "K" => {
-                    Some(Pieces::King)
-                },
-                "Q" => {
-                    Some(Pieces::Queen)
-                },
-                "P" => {
-                    Some(Pieces::Pawn)
-                },
-                _ => {
-                    None
-                }
+        let new_tilestate = TileState {
+            piece: match char::from(vec_form.pop().expect("Passed vector was empty")) {
+                'R' => Some(Pieces::Rook),
+                'N' => Some(Pieces::Knight),
+                'B' => Some(Pieces::Bishop),
+                'K' => Some(Pieces::King),
+                'Q' => Some(Pieces::Queen),
+                'P' => Some(Pieces::Pawn),
+                _ => None,
             },
-            piece_colour: match vec_form.pop().expect("Passed vector had only one item").to_string().as_str() {
-                "b" => {
-                    BoardColours::Black
-                },
-                _ => {
-                    BoardColours::White
-                }
+            piece_colour: match char::from(vec_form.pop().expect("Passed vector had only one item"))
+            {
+                'b' => BoardColours::Black,
+                _ => BoardColours::White,
             },
         };
-        return new_tilestate
+        return new_tilestate;
     }
     fn new() -> TileState {
-        TileState { piece: None, piece_colour: BoardColours::White }
+        TileState {
+            piece: None,
+            piece_colour: BoardColours::White,
+        }
     }
 }
 #[derive(Clone, Copy, PartialEq)]
@@ -766,7 +845,7 @@ impl Pieces {
     }
 }
 fn draw_board(board: &BoardState, as_player: BoardColours) {
-    if as_player == BoardColours::White {
+    if as_player == BoardColours::Black {
         let mut y: i8 = 8;
         let mut x: i8;
         while y >= 0 {
@@ -836,11 +915,11 @@ fn draw_board(board: &BoardState, as_player: BoardColours) {
     }
     println!();
     match board.current_player {
-        BoardColours::White => {
+        BoardColours::Black => {
             println!("{}", "   Black's turn   ".white().on_bright_black());
             print!("{}", " Black's move:".white().on_bright_black());
         }
-        BoardColours::Black => {
+        BoardColours::White => {
             println!("{}", "   White's turn   ".black().on_white());
             print!("{}", " White's move:".black().on_white());
         }
@@ -850,39 +929,13 @@ fn draw_board(board: &BoardState, as_player: BoardColours) {
 
 fn to_piece_name(tile: &TileState, colour: BoardColours) -> ColoredString {
     let mut tile_text: String = tile.to_string();
-    /*match tile.piece {
-        Some(piece) => match tile.piece_colour {
-            BoardColours::Black => match piece {
-                Pieces::EnPassant(_) => " ".to_string(), // 'E' for testing, ' ' for release
-                _default => "w".to_string(),
-            },
-            BoardColours::White => match piece {
-                Pieces::EnPassant(_) => " ".to_string(), // 'E' for testing, ' ' for release
-                _default => "b".to_string(),
-            },
-        },
-        None => " ".to_string(),
-    };
-
-    tile_text.push(match &tile.piece {
-        Some(piece) => match piece {
-            Pieces::Pawn => 'P',
-            Pieces::Rook => 'R',
-            Pieces::Knight => 'N',
-            Pieces::Bishop => 'B',
-            Pieces::Queen => 'Q',
-            Pieces::King => 'K',
-            Pieces::EnPassant(_) => ' ', // 'n' for testing, ' ' for release
-        },
-        None => ' ',
-    });*/
     let colored_text: ColoredString;
     return match colour {
-        BoardColours::Black => {
+        BoardColours::White => {
             colored_text = tile_text.on_white();
             colored_text.black()
         }
-        BoardColours::White => {
+        BoardColours::Black => {
             colored_text = tile_text.on_black();
             colored_text.white()
         }
