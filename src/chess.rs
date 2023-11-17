@@ -622,9 +622,12 @@ impl BoardState {
     }
     fn to_string(&self) -> String {
         let mut result: String = String::default();
+        let has_en_passant: bool = false;
         for y in 0..=7usize {
             for x in 0..=7usize {
-                result.push_str(&self.get_tile(usize::from(x), usize::from(y)).to_string());
+                result.push_str({
+                    &self.get_tile(usize::from(x), usize::from(y)).to_string()
+                });
             }
         }
         if self.current_player == BoardColours::Black {
@@ -666,13 +669,31 @@ impl BoardState {
     }
     fn from_string(&mut self, serialised_board: String) {
         let split_string = to_chunks(&serialised_board, 2);
+        let mut num: Vec<u8> = split_string[69].bytes().collect();
+        let num1 = i32::from(num.pop().unwrap_or(0));
+        let num2 = i32::from(num.pop().unwrap_or(0));
+        let final_num = num1 * (2 ^ 8) + num2;
+        
         for y in 0..=7usize {
             for x in 0..=7usize {
                 self.set_tile(
                     usize::from(x),
                     usize::from(y),
-                    TileState::new()
-                        .from_string(split_string[8 * y + x].to_string()));
+                    {
+                        let mut tile = TileState::new().from_string(split_string[8 * y + x].to_string());
+                        match tile.piece {
+                            Some(piece) => {
+                                match piece {
+                                    Pieces::EnPassant(_) => {
+                                        tile.piece.replace(Pieces::EnPassant(final_num));
+                                    },
+                                    _ => {},
+                                }
+                            },
+                            None => {},
+                        }
+                        tile
+                    });
             }
         }
         if split_string[64] == "bl" {
