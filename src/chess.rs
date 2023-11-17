@@ -12,18 +12,23 @@ pub fn main() {
     let mut turn_count: i32 = 0;
     println!();
     println!("Type \"{}\" to leave the game.", "exit".red());
-    println!("Type \"{}\" to get the history of the game.", "history".red());
+    println!(
+        "Type \"{}\" to get the history of the game.",
+        "history".red()
+    );
     println!("Type \"{}\" to restart the game.", "reset".red());
     println!();
     loop {
         draw_board(&board, board.current_player.invert());
 
         let mut line: String = String::default();
-        std::io::stdin().read_line(&mut line).unwrap();
+        let _ = std::io::stdin().read_line(&mut line);
         line = line.trim().to_owned();
         if line.to_lowercase() == "exit" {
-            println!("Returning to menu");
-            return;
+            if confirm() {
+                println!("Returning to menu");
+                return;
+            }
         } else if line.to_lowercase() == "history" {
             println!();
             println!("History: ");
@@ -33,8 +38,10 @@ pub fn main() {
             println!("End of history.");
             println!();
         } else if line.to_lowercase() == "reset" {
-            sequence = Vec::new();
-            board = start_board(BoardColours::White);
+            if confirm() {
+                sequence = Vec::new();
+                board = start_board(BoardColours::White);
+            }
         } else if line.len().eq(&usize::from(u8::from(4))) {
             let bytes: Vec<u8> = line.as_bytes().to_ascii_uppercase();
             let mut success: bool = true;
@@ -80,6 +87,13 @@ pub fn main() {
         }
         println!();
     }
+}
+fn confirm() -> bool {
+    print!("Are you sure? [y/n]: ");
+    let _ = std::io::stdout().flush();
+    let mut line = String::default();
+    let _ = std::io::stdin().read_line(&mut line);
+    line.trim().eq_ignore_ascii_case("y")
 }
 fn start_board(as_player: BoardColours) -> BoardState {
     let blank_row: TileState = TileState {
@@ -277,29 +291,80 @@ fn validate_king(potential_move: PieceMove, board: &mut BoardState) -> bool {
         }
         true
     } else {
-        match board.current_player.invert() { //No clue why but this needs to be inverted :)
+        match board.current_player.invert() {
+            //No clue why but this needs to be inverted :)
             BoardColours::White => {
-                if board.white_can_king_side_castle && potential_move.end_file == 1 && potential_move.end_rank == 0 && !board.get_tile(1, 0).is_physical() && !board.get_tile(2, 0).is_physical() {
-                    board.set_tile(2,0, board.get_owned_tile(0, 0)); // Move rook
-                    board.set_tile(0, 0, TileState { piece: None, piece_colour: BoardColours::White }); // Delete rook
+                if board.white_can_king_side_castle
+                    && potential_move.end_file == 1
+                    && potential_move.end_rank == 0
+                    && !board.get_tile(1, 0).is_physical()
+                    && !board.get_tile(2, 0).is_physical()
+                {
+                    board.set_tile(2, 0, board.get_owned_tile(0, 0)); // Move rook
+                    board.set_tile(
+                        0,
+                        0,
+                        TileState {
+                            piece: None,
+                            piece_colour: BoardColours::White,
+                        },
+                    ); // Delete rook
                     return true;
-                } else if board.white_can_queen_side_castle && potential_move.end_file == 5 && potential_move.end_rank == 0 && !board.get_tile(4, 0).is_physical() && !board.get_tile(5, 0).is_physical() && !board.get_tile(6, 0).is_physical()  {
-                    board.set_tile(5,0, board.get_owned_tile(3, 0)); // Move rook
-                    board.set_tile(8, 0, TileState { piece: None, piece_colour: BoardColours::White }); // Delete rook
+                } else if board.white_can_queen_side_castle
+                    && potential_move.end_file == 5
+                    && potential_move.end_rank == 0
+                    && !board.get_tile(4, 0).is_physical()
+                    && !board.get_tile(5, 0).is_physical()
+                    && !board.get_tile(6, 0).is_physical()
+                {
+                    board.set_tile(5, 0, board.get_owned_tile(3, 0)); // Move rook
+                    board.set_tile(
+                        8,
+                        0,
+                        TileState {
+                            piece: None,
+                            piece_colour: BoardColours::White,
+                        },
+                    ); // Delete rook
                     return true;
                 }
-            },
+            }
             BoardColours::Black => {
-                if board.black_can_king_side_castle && potential_move.end_file == 1 && potential_move.end_rank == 7 && !board.get_tile(1, 7).is_physical() && !board.get_tile(2, 7).is_physical() {
-                    board.set_tile(2,7, board.get_owned_tile(0, 7)); // Move rook
-                    board.set_tile(0, 7, TileState { piece: None, piece_colour: BoardColours::White }); // Delete rook
+                if board.black_can_king_side_castle
+                    && potential_move.end_file == 1
+                    && potential_move.end_rank == 7
+                    && !board.get_tile(1, 7).is_physical()
+                    && !board.get_tile(2, 7).is_physical()
+                {
+                    board.set_tile(2, 7, board.get_owned_tile(0, 7)); // Move rook
+                    board.set_tile(
+                        0,
+                        7,
+                        TileState {
+                            piece: None,
+                            piece_colour: BoardColours::White,
+                        },
+                    ); // Delete rook
                     return true;
-                } else if board.black_can_queen_side_castle && potential_move.end_file == 5 && potential_move.end_rank == 7 && !board.get_tile(4, 7).is_physical() && !board.get_tile(5, 7).is_physical() && !board.get_tile(6, 7).is_physical() {
-                    board.set_tile(5,7, board.get_owned_tile(7, 7)); // Move rook
-                    board.set_tile(8, 7, TileState { piece: None, piece_colour: BoardColours::White }); // Delete rook
+                } else if board.black_can_queen_side_castle
+                    && potential_move.end_file == 5
+                    && potential_move.end_rank == 7
+                    && !board.get_tile(4, 7).is_physical()
+                    && !board.get_tile(5, 7).is_physical()
+                    && !board.get_tile(6, 7).is_physical()
+                {
+                    board.set_tile(5, 7, board.get_owned_tile(7, 7)); // Move rook
+                    board.set_tile(
+                        8,
+                        7,
+                        TileState {
+                            piece: None,
+                            piece_colour: BoardColours::White,
+                        },
+                    ); // Delete rook
                     return true;
                 }
-            },
+            }
         }
         println!("You cannot move a king in this way");
         false
@@ -536,13 +601,14 @@ impl BoardState {
         self.tiles[file][rank] = tile;
     }
     fn copy(&self) -> BoardState {
-        BoardState { 
-            current_player: self.current_player, 
-            tiles: self.tiles.to_owned(), 
-            white_can_king_side_castle: self.white_can_king_side_castle, 
-            black_can_king_side_castle: self.black_can_king_side_castle, 
-            white_can_queen_side_castle: self.white_can_queen_side_castle, 
-            black_can_queen_side_castle: self.black_can_queen_side_castle }
+        BoardState {
+            current_player: self.current_player,
+            tiles: self.tiles.to_owned(),
+            white_can_king_side_castle: self.white_can_king_side_castle,
+            black_can_king_side_castle: self.black_can_king_side_castle,
+            white_can_queen_side_castle: self.white_can_queen_side_castle,
+            black_can_queen_side_castle: self.black_can_queen_side_castle,
+        }
     }
 }
 #[derive(Clone, Copy)]
