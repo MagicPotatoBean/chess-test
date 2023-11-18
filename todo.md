@@ -3,9 +3,10 @@
 - check checking
 - checkmate checking
 - save & load move sequences
-- networking
-## doing
 - save en passant turn value & turn value in save file
+- networking
+- king taken message
+## doing
 ## done
 - save & load custom gameboards
 - display history
