@@ -592,7 +592,6 @@ impl BoardState {
     }
     fn to_string(&self) -> String {
         let mut result: String = String::default();
-        let has_en_passant: bool = false;
         for y in 0..=7usize {
             for x in 0..=7usize {
                 result.push_str({
