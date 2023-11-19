@@ -127,15 +127,6 @@ fn start_board(as_player: BoardColours) -> BoardState {
     state.tiles[6][0].piece = Some(Pieces::Knight);
     state.tiles[7][0].piece = Some(Pieces::Rook);
 
-    state.tiles[0][1].piece = Some(Pieces::Pawn);
-    state.tiles[1][1].piece = Some(Pieces::Pawn);
-    state.tiles[2][1].piece = Some(Pieces::Pawn);
-    state.tiles[3][1].piece = Some(Pieces::Pawn);
-    state.tiles[4][1].piece = Some(Pieces::Pawn);
-    state.tiles[5][1].piece = Some(Pieces::Pawn);
-    state.tiles[6][1].piece = Some(Pieces::Pawn);
-    state.tiles[7][1].piece = Some(Pieces::Pawn);
-
     state.tiles[0][7].piece = Some(Pieces::Rook);
     state.tiles[1][7].piece = Some(Pieces::Knight);
     state.tiles[2][7].piece = Some(Pieces::Bishop);
@@ -145,33 +136,12 @@ fn start_board(as_player: BoardColours) -> BoardState {
     state.tiles[6][7].piece = Some(Pieces::Knight);
     state.tiles[7][7].piece = Some(Pieces::Rook);
 
-    state.tiles[0][7].piece_colour = BoardColours::Black;
-    state.tiles[1][7].piece_colour = BoardColours::Black;
-    state.tiles[2][7].piece_colour = BoardColours::Black;
-    state.tiles[3][7].piece_colour = BoardColours::Black;
-    state.tiles[4][7].piece_colour = BoardColours::Black;
-    state.tiles[5][7].piece_colour = BoardColours::Black;
-    state.tiles[6][7].piece_colour = BoardColours::Black;
-    state.tiles[7][7].piece_colour = BoardColours::Black;
-
-    state.tiles[0][6].piece = Some(Pieces::Pawn);
-    state.tiles[1][6].piece = Some(Pieces::Pawn);
-    state.tiles[2][6].piece = Some(Pieces::Pawn);
-    state.tiles[3][6].piece = Some(Pieces::Pawn);
-    state.tiles[4][6].piece = Some(Pieces::Pawn);
-    state.tiles[5][6].piece = Some(Pieces::Pawn);
-    state.tiles[6][6].piece = Some(Pieces::Pawn);
-    state.tiles[7][6].piece = Some(Pieces::Pawn);
-
-    state.tiles[0][6].piece_colour = BoardColours::Black;
-    state.tiles[1][6].piece_colour = BoardColours::Black;
-    state.tiles[2][6].piece_colour = BoardColours::Black;
-    state.tiles[3][6].piece_colour = BoardColours::Black;
-    state.tiles[4][6].piece_colour = BoardColours::Black;
-    state.tiles[5][6].piece_colour = BoardColours::Black;
-    state.tiles[6][6].piece_colour = BoardColours::Black;
-    state.tiles[7][6].piece_colour = BoardColours::Black;
-
+    for x in 0..=7 {
+        state.tiles[x][1].piece = Some(Pieces::Pawn);
+        state.tiles[x][7].piece_colour = BoardColours::Black;
+        state.tiles[x][6].piece = Some(Pieces::Pawn);
+        state.tiles[x][6].piece_colour = BoardColours::Black;
+    }
     return state;
 }
 
