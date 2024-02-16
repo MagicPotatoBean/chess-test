@@ -1,4 +1,4 @@
-use std::{fmt::Display, io::Write, ops::Rem};
+use std::{fmt::Display, io::Write, ops::{Index, IndexMut, Rem}};
 
 use colored::Colorize;
 use rand::Rng;
@@ -12,22 +12,46 @@ pub fn main() {
     let mut current_move = PieceMove::default();
     help_menu();
     loop {
-        draw_board(&board);
         if dice.0.is_none() && dice.1.is_none() {
-            dice.0 = Some(rand::thread_rng().gen_range(0..=6));
-            dice.1 = Some(rand::thread_rng().gen_range(0..=6));
-            board.current_player.end_turn();
+            dice.0 = Some(rand::thread_rng().gen_range(1..=6));
+            dice.1 = Some(rand::thread_rng().gen_range(1..=6));
+            board.end_turn();
+        }
+        draw_board(&board);
+        println!("White : Black = {} : {}", board.scores[CheckerColour::White], board.scores[CheckerColour::Black]);
+        if board.scores[CheckerColour::White] == 15 {
+            println!("White wins!");
+            break;
+        }
+        if board.scores[CheckerColour::Black] == 15 {
+            println!("Black wins!");
+            break;
         }
         let mut dice_roll = 0;
-        if let Some(dice1) = dice.0 {
-            println!("Dice 2: {}", dice1);
-            dice_roll = dice1;
-        }
         if let Some(dice2) = dice.1 {
-            println!("Dice 1: {}", dice2);
+            println!("Dice 2: {}", dice2);
             dice_roll = dice2;
+        } else {
+            println!()
+        }
+        if let Some(dice1) = dice.0 {
+            println!("Dice 1: {}", dice1);
+            dice_roll = dice1;
+        } else {
+            println!()
         }
         println!("Move {} Spaces: ", dice_roll);
+        match board.current_player {
+            CheckerColour::Black => {
+                println!("{}", "   Black's turn   ".white().on_bright_black());
+                print!("{}", " Black's move:".white().on_bright_black());
+            }
+            CheckerColour::White => {
+                println!("{}", "   White's turn   ".black().on_white());
+                print!("{}", " White's move:".black().on_white());
+            }
+        }
+        std::io::stdout().flush().unwrap();
         if let Some(mut line) = readline!() {
             line = line.trim().to_owned();
             if line.to_lowercase() == "menu" {
@@ -73,14 +97,29 @@ pub fn main() {
             //         Ok(string_data) => board = BoardState::from_string(string_data),
             //         Err(_) => println!("{}", "Failed to load file.".red()),
             //     }
+            } else if line.to_lowercase() == "stop" {
+                if dice.0.is_some() {
+                    dice.0 = None;
+                } else if dice.1.is_some() {
+                    dice.1 = None;
+                }
             } else {
                 if let Ok(piece) = prse::try_parse!(line, "{}") {
                     current_move.piece = piece;
                     current_move.piece = current_move.piece - 1;
-                    current_move.distance = dice_roll;
+                    current_move.distance =
+                        dice_roll.try_into().expect("Dice roll cannot exceed 6");
                     sequence.push(line.to_owned());
                     println!();
-                    // validate_and_play(current_move, &mut board);
+                    if !validate_and_play(current_move, &mut board) {
+                        println!("Invalid move");
+                    } else {
+                        if dice.0.is_some() {
+                            dice.0 = None;
+                        } else if dice.1.is_some() {
+                            dice.1 = None;
+                        }
+                    }
                 } else {
                     println!();
                     println!("Invalid move code")
@@ -90,14 +129,114 @@ pub fn main() {
         }
     }
 }
-// fn validate_and_play(current_move: PieceMove, board: &mut BoardState) {
-//     let from_space = &board.spaces[current_move.piece as usize];
-//     if current_move.piece + current_move.distance <
-// }
-#[derive(Default)]
+fn validate_and_play(current_move: PieceMove, board: &mut BoardState) -> bool {
+    if match board.current_player {
+        CheckerColour::Black => current_move.piece + current_move.distance == 24,
+        CheckerColour::White => current_move.piece - current_move.distance == 0,
+    } {
+        match board.spaces.get_mut(current_move.piece as usize) {
+            Some(from_move) => {
+                from_move.count -= 1;
+                board.scores[board.current_player] += 1;
+                true
+            }
+            None => false,
+        }
+    } else {
+        match board.current_player {
+            CheckerColour::Black => {
+                if is_valid_move(current_move, board) {
+                    (match board.spaces.get_mut(current_move.piece as usize) {
+                        Some(from_move) => {
+                            from_move.count -= 1;
+                            true
+                        }
+                        None => false,
+                    }) && (match board
+                        .spaces
+                        .get_mut((current_move.piece + current_move.distance) as usize)
+                    {
+                        Some(to_move) => {
+                            if to_move.checker == board.current_player {
+                                to_move.count += 1;
+                                true
+                            } else {
+                                to_move.count = 1;
+                                to_move.checker = board.current_player;
+                                true
+                            }
+                        }
+                        None => panic!("Unstable game state, aborting."),
+                    })
+                } else {
+                    false
+                }
+            },
+            CheckerColour::White => {
+                if is_valid_move(current_move, board) {
+                    (match board.spaces.get_mut(current_move.piece as usize) {
+                        Some(from_move) => {
+                            from_move.count -= 1;
+                            true
+                        }
+                        None => false,
+                    }) && (match board
+                        .spaces
+                        .get_mut((current_move.piece - current_move.distance) as usize)
+                    {
+                        Some(to_move) => {
+                            if to_move.checker == board.current_player {
+                                to_move.count += 1;
+                                true
+                            } else {
+                                to_move.count = 1;
+                                to_move.checker = board.current_player;
+                                true
+                            }
+                        }
+                        None => panic!("Unstable game state, aborting."),
+                    })
+                } else {
+                    false
+                }
+            },
+        }
+    }
+}
+fn is_valid_move(current_move: PieceMove, board: &mut BoardState) -> bool {
+    if match board.current_player {
+        CheckerColour::Black => {
+            current_move.piece + current_move.distance > 24
+                || current_move.piece + current_move.distance < 0
+        }
+        CheckerColour::White => {
+            current_move.piece - current_move.distance > 24
+                || current_move.piece - current_move.distance < 0
+        }
+    } {
+        return false;
+    }
+    (match board.spaces.get(current_move.piece as usize) {
+        Some(from_move) => from_move.checker == board.current_player && from_move.count > 0,
+        None => false,
+    }) && (match board
+        .spaces
+        .get((current_move.piece + current_move.distance) as usize)
+    {
+        Some(to_move) => {
+            if to_move.checker == board.current_player {
+                true
+            } else {
+                to_move.count <= 1
+            }
+        }
+        None => current_move.piece + current_move.distance == 24,
+    })
+}
+#[derive(Default, Copy, Clone)]
 struct PieceMove {
-    piece: u32,
-    distance: u32,
+    piece: i32,
+    distance: i32,
 }
 fn help_menu() {
     println!();
@@ -119,13 +258,7 @@ fn confirm() -> bool {
     let _ = std::io::stdin().read_line(&mut line);
     line.trim().eq_ignore_ascii_case("y")
 }
-#[derive(Default)]
-enum BoardColour {
-    Yellow,
-    #[default]
-    Red,
-}
-#[derive(Default)]
+#[derive(Default, PartialEq, Eq, Clone, Copy)]
 enum CheckerColour {
     Black,
     #[default]
@@ -156,6 +289,7 @@ impl SpaceState {
 struct BoardState {
     spaces: [SpaceState; 24],
     current_player: CheckerColour,
+    scores: Scores,
 }
 impl Default for BoardState {
     fn default() -> Self {
@@ -187,6 +321,7 @@ impl Default for BoardState {
                 SpaceState::new(CheckerColour::White, 2),
             ],
             current_player: Default::default(),
+            scores: Default::default(),
         }
     }
 }
@@ -209,10 +344,33 @@ impl BoardState {
         self.current_player.end_turn();
     }
 }
+#[derive(Default)]
+struct Scores {
+    white: u32,
+    black: u32,
+}
+impl Index<CheckerColour> for Scores {
+    type Output = u32;
+
+    fn index(&self, index: CheckerColour) -> &Self::Output {
+        match index {
+            CheckerColour::Black => &self.black,
+            CheckerColour::White => &self.white,
+        }
+    }
+}
+impl IndexMut<CheckerColour> for Scores {
+    fn index_mut(&mut self, index: CheckerColour) -> &mut Self::Output {
+        match index {
+            CheckerColour::Black => &mut self.black,
+            CheckerColour::White => &mut self.white,
+        }
+    }
+}
 fn draw_board(board: &BoardState) {
     println!();
     match board.current_player {
-        CheckerColour::Black => {
+        CheckerColour::White => {
             println!("{: >24}", "╭Black─home╮");
             for y in 0..14 {
                 for x in 0..12 {
@@ -292,7 +450,7 @@ fn draw_board(board: &BoardState) {
             }
             println!("{: >24}", "╰White─home╯");
         }
-        CheckerColour::White => {
+        CheckerColour::Black => {
             println!("{: <24}", "╭White─home╮");
             for y in 0..14 {
                 for x in 0..12 {
@@ -367,5 +525,4 @@ fn draw_board(board: &BoardState) {
             println!("{: <24}", "╰Black─home╯");
         }
     }
-    println!();
 }
