@@ -99,10 +99,10 @@ impl Display for CardFace {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let card_unicode = 0x1F0A0 + self.suit.get_unicode_offset() + self.rank.get_unicode_offset();
                 let card_char = char::from_u32(card_unicode).unwrap();
-                write!(f, "{card_char}")
+                write!(f, "{card_char} ")
     }
 }
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct Card {
     pub card: Option<CardFace>,
 }
@@ -112,9 +112,9 @@ impl Display for Card {
             Some(card) => {
                 let card_unicode = 0x1F0A0 + card.suit.get_unicode_offset() + card.rank.get_unicode_offset();
                 let card_char = char::from_u32(card_unicode).unwrap();
-                write!(f, "{card_char}")
+                write!(f, "{card_char} ")
             }
-            None => write!(f, "\u{1F0A0}"),
+            None => write!(f, "\u{1F0A0} "),
         }
     }
 }

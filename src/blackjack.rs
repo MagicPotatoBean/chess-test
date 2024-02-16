@@ -144,7 +144,7 @@ fn card_value(card: &CardFace, ace_high: bool) -> u32 {
 impl Display for Hand {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for card in self.cards.iter() {
-            write!(f, "{} ", card)?;
+            write!(f, "{}", card)?;
         }
         Ok(())
     }
