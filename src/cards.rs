@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::{cmp::Ordering, fmt::Display};
 
 use rand::{seq::SliceRandom, thread_rng};
