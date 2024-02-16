@@ -17,7 +17,7 @@ fn main() {
         println!("    [B]ackgammon");
         println!("1 Player games:");
         println!("    B[l]ackjack");
-        println!("    [P]oker");
+        println!("    [P]oker (WIP)");
         println!();
         println!("[E]xit");
         let user_input = readline!();
