@@ -9,11 +9,15 @@ fn main() {
     loop {
         println!(" Rust board games ");
         println!("------------------");
-        println!("[C]hess");
-        println!("C[h]eckers");
+        // println!("4 Player games:");
         // println!("[L]udo");
-        println!("[B]ackgammon (WIP)");
-        println!("B[l]ackjack");
+        println!("2 Player games:");
+        println!("    [C]hess");
+        println!("    C[h]eckers");
+        println!("    [B]ackgammon");
+        println!("1 Player games:");
+        println!("    B[l]ackjack");
+        println!();
         println!("[E]xit");
         let user_input = readline!();
         match user_input.map(|input| input.trim().to_lowercase()).as_deref() {
