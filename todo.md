@@ -1,4 +1,5 @@
-# todo.md
+# To-Do
+***
 ## Chess
 ### to-do
 - check checking
@@ -14,11 +15,13 @@
 - reset
 - castling
 - correctly rotate board between moves
+***
 ## Checkers
 ### to-do
 ### doing
 ### done
 - promote checkers to kings
+***
 ## Ludo
 ### to-do
 - Draw pieces
@@ -29,8 +32,19 @@
 ### doing
 - Draw board
 ### done
+***
 ## Backgammon
 ### to-do
 - allow taken pieces to be replaced
+### doing
+### done
+***
+## Poker
+### to-do
+### doing
+### done
+***
+## Template
+### to-do
 ### doing
 ### done

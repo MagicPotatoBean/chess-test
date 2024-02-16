@@ -4,7 +4,7 @@ mod chess;
 mod backgammon;
 mod blackjack;
 mod cards;
-
+mod poker;
 fn main() {
     loop {
         println!(" Rust board games ");
@@ -17,6 +17,7 @@ fn main() {
         println!("    [B]ackgammon");
         println!("1 Player games:");
         println!("    B[l]ackjack");
+        println!("    [P]oker");
         println!();
         println!("[E]xit");
         let user_input = readline!();
@@ -26,6 +27,7 @@ fn main() {
             // Some("l") => ludo::main(),
             Some("b") => backgammon::main(),
             Some("l") => blackjack::main(),
+            Some("p") => poker::main(),
             Some("e") => break,
             _ => {}
         }
