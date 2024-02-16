@@ -1,5 +1,5 @@
 use colored::{ColoredString, Colorize};
-use std::{io::Write, fmt::Display};
+use std::{fmt::Display, io::Write};
 pub fn main() {
     let mut board = BoardState::default();
     let mut sequence: Vec<String> = Vec::new();
@@ -16,13 +16,13 @@ pub fn main() {
 
         let mut line: String = String::default();
         let _ = std::io::stdin().read_line(&mut line);
-        line = line.trim().to_owned();
-        if line.to_lowercase() == "exit" {
+        line = line.to_lowercase().trim().to_owned();
+        if line == "menu" {
             if confirm() {
                 println!("Returning to menu");
                 return;
             }
-        } else if line.to_lowercase() == "history" {
+        } else if line == "history" {
             println!();
             println!("History: ");
             for line in &sequence {
@@ -30,14 +30,14 @@ pub fn main() {
             }
             println!("End of history.");
             println!();
-        } else if line.to_lowercase() == "help" {
+        } else if line == "help" {
             help_menu();
-        } else if line.to_lowercase() == "reset" {
+        } else if line == "reset" {
             if confirm() {
                 sequence = Vec::new();
                 board = BoardState::default();
             }
-        } else if line.to_lowercase() == "save" {
+        } else if line == "save" {
             println!("Please provide a filepath to save the game status to.");
             print!("Path: ");
             let _ = std::io::stdout().flush();
@@ -48,7 +48,7 @@ pub fn main() {
             if res.is_err() {
                 println!("Failed to save game status.");
             }
-        } else if line.to_lowercase() == "load" {
+        } else if line == "load" {
             println!("Please provide a filepath to load the game status from.");
             print!("Path: ");
             let _ = std::io::stdout().flush();
@@ -108,9 +108,9 @@ pub fn main() {
 }
 fn help_menu() {
     println!();
-    println!("Type \"{}\" to leave the game.", "exit".red());
+    println!("Type \"{}\" to return to the menu.", "menu".red());
     println!("Type \"{}\" to get the history of the game.", "history".red());
-    println!("Type \"{}\" to restart the game.", "help".red());
+    println!("Type \"{}\" to show this menu.", "help".red());
     println!("Type \"{}\" to restart the game.", "reset".red());
     println!("Type \"{}\" to save the state of the board.", "save".red());
     println!("Type \"{}\" to load the state of the board.", "load".red());
@@ -584,7 +584,7 @@ impl Display for BoardState {
         let mut result: String = String::default();
         for y in 0..=7usize {
             for x in 0..=7usize {
-                result.push_str(&self.get_tile(x, y).to_string());
+                result.push_str(&self.get_tile(x, y).as_string());
             }
         }
         if self.current_player == BoardColours::Black {
@@ -735,33 +735,53 @@ impl std::fmt::Display for TileState {
     // }
 
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut result: String = String::default();
-        let mut display_colour = true;
+        // Some(piece) => match piece {
+        //     Pieces::Pawn => 'P',
+        //     Pieces::Rook => 'R',
+        //     Pieces::Knight => 'N',
+        //     Pieces::Bishop => 'B',
+        //     Pieces::Queen => 'Q',
+        //     Pieces::King => 'K',
+        //     Pieces::EnPassant(_) => {
+        //         display_colour = false;
+        //         ' '
+        //     }
+        // },
+        // None => {
+        //     display_colour = false;
+        //     ' '
+        // }
         let piece_name = match self.piece {
-            Some(piece) => match piece {
-                Pieces::Pawn => 'P',
-                Pieces::Rook => 'R',
-                Pieces::Knight => 'N',
-                Pieces::Bishop => 'B',
-                Pieces::Queen => 'Q',
-                Pieces::King => 'K',
-                Pieces::EnPassant(_) => {
-                    display_colour = false;
-                    ' '
+            Some(piece) => match self.piece_colour {
+                BoardColours::White => match piece {
+                    Pieces::Pawn => "\u{2659} ",
+                    Pieces::Rook => "\u{2656} ",
+                    Pieces::Knight => "\u{2658} ",
+                    Pieces::Bishop => "\u{2657} ",
+                    Pieces::Queen => "\u{2655} ",
+                    Pieces::King => "\u{2654} ",
+                    Pieces::EnPassant(_) => {
+                        "  "
+                    },
                 }
+                BoardColours::Black => match piece {
+                    Pieces::Pawn => "\u{265F} ",
+                    Pieces::Rook => "\u{265C} ",
+                    Pieces::Knight => "\u{265E} ",
+                    Pieces::Bishop => "\u{265D} ",
+                    Pieces::Queen => "\u{265B} ",
+                    Pieces::King => "\u{265A} ",
+                    Pieces::EnPassant(_) => {
+                        "  "
+                    },
+                }
+                
             },
             None => {
-                display_colour = false;
-                ' '
+                "  "
             }
         };
-        result.push(if display_colour {
-            self.piece_colour.to_char()
-        } else {
-            ' '
-        });
-        result.push(piece_name);
-        write!(f, "{}", result)
+        write!(f, "{}", piece_name)
     }
 }
 impl TileState {
@@ -800,6 +820,36 @@ impl TileState {
             },
         }
     }
+    fn as_string(self) -> String {
+        let mut display_colour = true;
+        let mut value = String::default();
+        value.push( match self.piece {
+                Some(piece) => match piece {
+            Pieces::Pawn => 'P',
+            Pieces::Rook => 'R',
+            Pieces::Knight => 'N',
+            Pieces::Bishop => 'B',
+            Pieces::Queen => 'Q',
+            Pieces::King => 'K',
+            Pieces::EnPassant(_) => {
+                display_colour = false;
+                ' '
+            }
+        },
+        None => {
+            display_colour = false;
+            ' '
+            }
+        });
+        value.push(if display_colour {match self.piece_colour {
+            BoardColours::White => 'w',
+            BoardColours::Black => 'b',
+        }} else {
+            ' '
+        });
+        value
+
+    }
 }
 
 impl Default for TileState {
@@ -822,12 +872,12 @@ impl BoardColours {
             BoardColours::Black => BoardColours::White,
         }
     }
-    fn to_char(self) -> char {
-        match self {
-            BoardColours::White => 'w',
-            BoardColours::Black => 'b',
-        }
-    }
+    // fn to_char(self) -> char {
+    //     match self {
+    //         BoardColours::White => 'w',
+    //         BoardColours::Black => 'b',
+    //     }
+    // }
 }
 #[derive(Clone, Copy)]
 enum Pieces {
