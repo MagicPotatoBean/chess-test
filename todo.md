@@ -29,3 +29,8 @@
 ### doing
 - Draw board
 ### done
+## Backgammon
+### to-do
+- allow taken pieces to be replaced
+### doing
+### done
