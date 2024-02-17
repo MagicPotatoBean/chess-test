@@ -1,4 +1,4 @@
-use std::{default, fmt::Display};
+use std::{default, fmt::Display, io::Write};
 
 use crate::{cards::{self, *}, readline};
 pub fn main() {
@@ -16,7 +16,9 @@ pub fn main() {
                 if let Some(user_input) = readline!() {
                     let input = user_input.trim().to_lowercase();
                     match input.as_str() {
-                        "menu" => {},
+                        "menu" => {if confirm() {
+                            break
+                        }},
                         "fold" => {},
                         other => {},
                     };
@@ -33,6 +35,13 @@ pub fn main() {
             GameState::AllCardsShown => todo!(),
         }
     }
+}
+fn confirm() -> bool {
+    print!("Are you sure? [y/n]: ");
+    let _ = std::io::stdout().flush();
+    let mut line = String::default();
+    let _ = std::io::stdin().read_line(&mut line);
+    line.trim().eq_ignore_ascii_case("y")
 }
 #[derive(Default)]
 enum GameState {
