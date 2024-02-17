@@ -112,8 +112,8 @@ impl HandValue for Hand {
             }
         }
         for ace_low_count in 0..=ace_count {
-            if sum + ace_low_count + (ace_count * 11) <= 21 {
-                return sum + ace_low_count + (ace_count * 11);
+            if sum + ace_low_count + ((ace_count - ace_low_count) * 11) <= 21 {
+                return sum + ace_low_count + ((ace_count - ace_low_count) * 11);
             }
         }
         sum + ace_count
@@ -158,4 +158,17 @@ fn play_dealer(deck: &mut Deck) -> Hand {
         }
     }
     hand
+}
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn hand_value_test() {
+        use super::*;
+
+        let mut hand = Hand::default();
+        hand.cards.push(CardFace{rank: Rank::Ace, suit: Suits::Diamonds});
+        hand.cards.push(CardFace{rank: Rank::Number(3), suit: Suits::Diamonds});
+        hand.cards.push(CardFace{rank: Rank::Ace, suit: Suits::Spades});
+        assert_eq!(hand.value(), 15)
+    }
 }
