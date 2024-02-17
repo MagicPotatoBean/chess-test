@@ -5,6 +5,7 @@ mod backgammon;
 mod blackjack;
 mod cards;
 mod poker;
+mod dice;
 fn main() {
     loop {
         println!(" Rust board games ");

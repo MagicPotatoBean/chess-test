@@ -1,20 +1,20 @@
-use std::{fmt::Display, io::Write, ops::{Index, IndexMut, Rem}};
+use std::{fmt::Display, io::Write, ops::{Index, IndexMut, Rem}, u32};
 
 use colored::Colorize;
-use rand::Rng;
 
-use crate::readline;
+
+use crate::{dice::Dice, readline};
 
 pub fn main() {
     let mut board = BoardState::default();
     let mut sequence: Vec<String> = Vec::new();
-    let mut dice: (Option<u32>, Option<u32>) = (None, None);
+    let mut dice: (Option<Dice>, Option<Dice>) = (None, None);
     let mut current_move = PieceMove::default();
     help_menu();
     loop {
         if dice.0.is_none() && dice.1.is_none() {
-            dice.0 = Some(rand::thread_rng().gen_range(1..=6));
-            dice.1 = Some(rand::thread_rng().gen_range(1..=6));
+            dice.0 = Some(Dice::default());
+            dice.1 = Some(Dice::default());
             board.end_turn();
         }
         draw_board(&board);
@@ -27,20 +27,19 @@ pub fn main() {
             println!("Black wins!");
             break;
         }
-        let mut dice_roll = 0;
+        let mut dice_roll = Dice::default();
+        print!("Dice: ");
         if let Some(dice2) = dice.1 {
-            println!("Dice 2: {}", dice2);
+            print!("{}", dice2);
             dice_roll = dice2;
-        } else {
-            println!()
         }
         if let Some(dice1) = dice.0 {
-            println!("Dice 1: {}", dice1);
+            println!("{}", dice1);
             dice_roll = dice1;
         } else {
             println!()
         }
-        println!("Move {} Spaces: ", dice_roll);
+        println!("Select a piece to move {} Spaces: ", dice_roll);
         match board.current_player {
             CheckerColour::Black => {
                 println!("{}", "   Black's turn   ".white().on_bright_black());
@@ -107,8 +106,7 @@ pub fn main() {
                 if let Ok(piece) = prse::try_parse!(line, "{}") {
                     current_move.piece = piece;
                     current_move.piece = current_move.piece - 1;
-                    current_move.distance =
-                        dice_roll.try_into().expect("Dice roll cannot exceed 6");
+                    current_move.distance = i32::from(u8::from(dice_roll));
                     sequence.push(line.to_owned());
                     println!();
                     if !validate_and_play(current_move, &mut board) {

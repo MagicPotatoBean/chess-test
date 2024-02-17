@@ -1,8 +1,11 @@
 use std::{io::Write, ops::Rem};
 
 use colored::{ColoredString, Colorize};
-const CHECKERSPRITE: char = '●'; //●
-const KINGSPRITE: char = '◉'; //◉
+const WHITECHECKERSPRITE: char = '\u{026C0}'; //\u{026C0}
+const BLACKCHECKERSPRITE: char = '\u{026C2}'; //\u{026C2}
+const WHITEKINGSPRITE: char = '\u{026c1}'; //\u{026c1}
+const BLACKKINGSPRITE: char = '\u{026c3}'; //\u{026c3}
+
 pub fn main() {
     let mut board = BoardState::default();
     let mut sequence: Vec<String> = Vec::new();
@@ -530,26 +533,29 @@ struct TileState {
 }
 impl TileState {
     fn to_string(&self) -> ColoredString {
-        let mut self_string: ColoredString;
+        let self_string: ColoredString;
         match self.piece {
             Some(piece) => match piece {
                 Pieces::Checker => {
-                    let mut sprite = CHECKERSPRITE.to_string();
+                    
+                    let mut sprite = match self.piece_colour {
+                        BoardColours::White => WHITECHECKERSPRITE,
+                        BoardColours::Black => BLACKCHECKERSPRITE,
+                    }.to_string();
                     sprite.push(' ');
                     self_string = sprite.as_str().into()
                 }
                 Pieces::King => {
-                    let mut sprite = KINGSPRITE.to_string();
+                    let mut sprite = match self.piece_colour{
+                        BoardColours::White => WHITEKINGSPRITE,
+                        BoardColours::Black => BLACKKINGSPRITE,
+                    }.to_string();
                     sprite.push(' ');
                     self_string = sprite.as_str().into()
                 }
             },
             None => self_string = "  ".into(),
         }
-        self_string = match self.piece_colour {
-            BoardColours::White => self_string.white(),
-            BoardColours::Black => self_string.black(),
-        };
         self_string
     }
     fn is_white(&self) -> bool {
@@ -741,8 +747,8 @@ fn draw_board(board: &BoardState, as_player: BoardColours) {
 
 fn to_piece_name(tile: &TileState, colour: BoardColours) -> ColoredString {
     match colour {
-        BoardColours::White => tile.to_string().on_truecolor(113, 113, 113),
-        BoardColours::Black => tile.to_string().on_truecolor(143, 143, 143),
+        BoardColours::White => tile.to_string().on_black().white(),
+        BoardColours::Black => tile.to_string().on_white().black(),
     }
 }
 
