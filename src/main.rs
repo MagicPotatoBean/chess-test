@@ -13,12 +13,12 @@ fn main() {
         // println!("4 Player games:");
         // println!("[L]udo");
         println!("2 Player games:");
-        println!("    [C]hess");
-        println!("    C[h]eckers");
-        println!("    [B]ackgammon");
+        println!("    \u{2659} [C]hess");
+        println!("    \u{026c1} C[h]eckers");
+        println!("    \u{2684} [B]ackgammon");
         println!("1 Player games:");
-        println!("    B[l]ackjack");
-        println!("    [P]oker (WIP)");
+        println!("    \u{1F0DB} B[l]ackjack");
+        println!("    \u{2666} [P]oker (WIP)");
         println!();
         println!("[E]xit");
         let user_input = readline!();
