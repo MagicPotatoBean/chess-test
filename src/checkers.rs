@@ -38,7 +38,7 @@ pub fn main() {
             println!();
             println!("History: ");
             for line in &sequence {
-                println!("{}", line);
+                println!("{line}");
             }
             println!("End of history.");
             println!();
@@ -102,7 +102,7 @@ pub fn main() {
                 success = false;
             }
             if success {
-                sequence.push(line.to_owned());
+                sequence.push(line.clone());
                 println!();
                 /*if view_board_as == BoardColours::Black {
                     current_move.rotate_self();
@@ -121,8 +121,8 @@ pub fn main() {
     }
 }
 fn promote_pieces(board: &mut BoardState) {
-    for tile in board.tiles.iter_mut() {
-        if tile.get(0).expect("Board is incorrect size").is_black() {
+    for tile in &mut board.tiles {
+        if tile.first().expect("Board is incorrect size").is_black() {
             tile.get_mut(0).expect("Board is invalid size").promote();
         }
         if tile.get(7).expect("Board is incorrect size").is_white() {
@@ -142,13 +142,9 @@ fn validate_and_move(potential_move: PieceMove, board: &mut BoardState, allow_mo
         .piece_colour
         == board.tiles[usize::from(potential_move.end_file)][usize::from(potential_move.end_rank)]
             .piece_colour
-        && match board.tiles[usize::from(potential_move.end_file)]
+        && board.tiles[usize::from(potential_move.end_file)]
             [usize::from(potential_move.end_rank)]
-        .piece
-        {
-            Some(_) => true,
-            None => false,
-        }
+        .piece.is_some()
     {
         return false; //Checks the player isn't taking their own pieces (and that piece exists/is en passant)
     } //This also prevents them from not moving(e.g. moving to where they are)
@@ -187,27 +183,10 @@ fn move_piece(intended_move: PieceMove, board: &mut BoardState) {
 }
 fn validate_checker(potential_move: PieceMove, board: &mut BoardState, allow_move: bool) -> bool {
     if potential_move.end_file.abs_diff(potential_move.start_file) == 1
-        && potential_move.end_rank == potential_move.start_rank + 1
-        && board.current_player == BoardColours::White
+        && ((potential_move.end_rank == potential_move.start_rank + 1 && board.current_player == BoardColours::White) || (potential_move.end_rank == potential_move.start_rank - 1
+            && board.current_player == BoardColours::Black))
+        
         && allow_move
-    {
-        if board
-            .get_tile(
-                potential_move.end_file.into(),
-                potential_move.end_rank.into(),
-            )
-            .piece
-            .is_none()
-        {
-            move_piece(potential_move, board);
-            true
-        } else {
-            false
-        }
-    } else if potential_move.end_file.abs_diff(potential_move.start_file) == 1
-        && potential_move.end_rank == potential_move.start_rank - 1
-        && board.current_player == BoardColours::Black
-        &&allow_move
     {
         if board
             .get_tile(
@@ -543,7 +522,7 @@ impl TileState {
                         BoardColours::Black => BLACKCHECKERSPRITE,
                     }.to_string();
                     sprite.push(' ');
-                    self_string = sprite.as_str().into()
+                    self_string = sprite.as_str().into();
                 }
                 Pieces::King => {
                     let mut sprite = match self.piece_colour{
@@ -551,7 +530,7 @@ impl TileState {
                         BoardColours::Black => BLACKKINGSPRITE,
                     }.to_string();
                     sprite.push(' ');
-                    self_string = sprite.as_str().into()
+                    self_string = sprite.as_str().into();
                 }
             },
             None => self_string = "  ".into(),
@@ -594,7 +573,7 @@ impl TileState {
         self.piece = self.piece.map(|piece| match piece {
             Pieces::Checker => Pieces::King,
             Pieces::King => Pieces::King,
-        })
+        });
     }
 }
 struct BoardState {
@@ -654,7 +633,7 @@ impl Default for BoardState {
                             .unwrap()
                             .get_mut(y as usize)
                             .unwrap()
-                            .piece = None
+                            .piece = None;
                     }
                 }
             }
@@ -674,7 +653,7 @@ fn draw_board(board: &BoardState, as_player: BoardColours) {
                     if y == 0 {
                         print!("  ");
                     } else {
-                        print!("{} ", y);
+                        print!("{y} ");
                     }
                 } else if y == 0 {
                     print!("{} ", to_letter((x).unsigned_abs()));
@@ -690,7 +669,7 @@ fn draw_board(board: &BoardState, as_player: BoardColours) {
                                 BoardColours::White
                             }
                         )
-                    )
+                    );
                 }
                 x += 1;
             }
@@ -723,7 +702,7 @@ fn draw_board(board: &BoardState, as_player: BoardColours) {
                                 BoardColours::White
                             }
                         )
-                    )
+                    );
                 }
                 x -= 1;
             }
@@ -742,7 +721,7 @@ fn draw_board(board: &BoardState, as_player: BoardColours) {
             print!("{}", " White's move:".black().on_white());
         }
     }
-    std::io::stdout().flush().unwrap();
+    let _ = std::io::stdout().flush();
 }
 
 fn to_piece_name(tile: &TileState, colour: BoardColours) -> ColoredString {

@@ -26,7 +26,7 @@ pub fn main() {
             println!();
             println!("History: ");
             for line in &sequence {
-                println!("{}", line);
+                println!("{line}");
             }
             println!("End of history.");
             println!();
@@ -88,7 +88,7 @@ pub fn main() {
                 success = false;
             }
             if success {
-                sequence.push(line.to_owned());
+                sequence.push(line.clone());
                 println!();
                 /*if view_board_as == BoardColours::Black {
                     current_move.rotate_self();
@@ -97,7 +97,7 @@ pub fn main() {
                 turn_count += 1;
             } else {
                 println!();
-                println!("Invalid move code")
+                println!("Invalid move code");
             }
         } else {
             println!();
@@ -622,7 +622,7 @@ impl Display for BoardState {
             result.push('f');
             result.push('a');
         }
-        write!(f, "{}", result)
+        write!(f, "{result}")
     }
 }
 impl BoardState {
@@ -638,7 +638,7 @@ impl BoardState {
     fn copy(&self) -> BoardState {
         BoardState {
             current_player: self.current_player,
-            tiles: self.tiles.to_owned(),
+            tiles: self.tiles.clone(),
             white_can_king_side_castle: self.white_can_king_side_castle,
             black_can_king_side_castle: self.black_can_king_side_castle,
             white_can_queen_side_castle: self.white_can_queen_side_castle,
@@ -781,7 +781,7 @@ impl std::fmt::Display for TileState {
                 "  "
             }
         };
-        write!(f, "{}", piece_name)
+        write!(f, "{piece_name}")
     }
 }
 impl TileState {
@@ -900,7 +900,7 @@ fn draw_board(board: &BoardState, as_player: BoardColours) {
                     if y == 0 {
                         print!("  ");
                     } else {
-                        print!("{} ", y);
+                        print!("{y} ");
                     }
                 } else if y == 0 {
                     print!("{} ", to_letter((x).unsigned_abs()));
@@ -916,7 +916,7 @@ fn draw_board(board: &BoardState, as_player: BoardColours) {
                                 BoardColours::White
                             }
                         )
-                    )
+                    );
                 }
                 x += 1;
             }
@@ -949,7 +949,7 @@ fn draw_board(board: &BoardState, as_player: BoardColours) {
                                 BoardColours::White
                             }
                         )
-                    )
+                    );
                 }
                 x -= 1;
             }

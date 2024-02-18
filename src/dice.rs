@@ -7,13 +7,13 @@ pub struct Dice {
 }
 impl Dice {
     pub fn roll(&mut self) {
-        self.value = rand::thread_rng().gen_range(1..=6)
+        self.value = rand::thread_rng().gen_range(1..=6);
     }
     pub fn get_value(&self) -> u8 {
         self.value
     }
     pub fn set_value(&mut self, val: u8) -> bool {
-        if val >= 1 && val <= 6 {
+        if (1..=6).contains(&val) {
             self.value = val;
             true
         } else {
@@ -44,6 +44,6 @@ impl Default for Dice {
 }
 impl From<Dice> for u8 {
     fn from(value: Dice) -> Self {
-        value.value.into()
+        value.value
     }
 }

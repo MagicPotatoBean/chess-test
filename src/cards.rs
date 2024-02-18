@@ -124,10 +124,10 @@ pub struct Deck {
 }
 impl Deck {
     pub fn shuffle(&mut self) {
-        self.cards.shuffle(&mut thread_rng())
+        self.cards.shuffle(&mut thread_rng());
     }
     pub fn sort(&mut self) {
-        self.cards.sort()
+        self.cards.sort();
     }
     pub fn draw_card(&mut self) -> Option<CardFace> {
         let card = self.cards.pop();
@@ -222,13 +222,13 @@ impl Default for Deck {
 }
 impl Display for Deck {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Cards in deck:\n")?;
-        for card in self.cards.iter() {
-            write!(f, "{} ", card)?;
+        writeln!(f, "Cards in deck:")?;
+        for card in &self.cards {
+            write!(f, "{card} ")?;
         }
         write!(f, "\nCards taken from deck:\n")?;
-        for card in self.taken_cards.iter() {
-            write!(f, "{} ", card)?;
+        for card in &self.taken_cards {
+            write!(f, "{card} ")?;
         }
         Ok(())
     }

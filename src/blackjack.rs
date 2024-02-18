@@ -1,4 +1,4 @@
-use crate::{cards::*, readline};
+use crate::{cards::{CardFace, Deck, HandValue, Rank}, readline};
 use colored::Colorize;
 use std::{fmt::Display, io::Write};
 pub fn main() {
@@ -11,7 +11,7 @@ pub fn main() {
     help_menu();
     'outer_loop: loop {
         println!("----- Blackjack -----");
-        println!("Wins:Losses = {}:{}", player_wins, dealer_wins);
+        println!("Wins:Losses = {player_wins}:{dealer_wins}");
         deck = Deck::default();
         deck.shuffle();
         dealer_hand = play_dealer(&mut deck);
@@ -37,7 +37,7 @@ pub fn main() {
                 if user_input == "menu" && confirm() {
                     break 'outer_loop;
                 } else if user_input == "help" {
-                    help_menu()
+                    help_menu();
                 } else if user_input == "reset" && confirm() {
                     break 'game_loop;
                 } else if user_input == "hit" {
@@ -97,6 +97,7 @@ fn confirm() -> bool {
     let _ = std::io::stdin().read_line(&mut line);
     line.trim().eq_ignore_ascii_case("y")
 }
+#[derive(Default)]
 struct Hand {
     cards: Vec<CardFace>,
 }
@@ -104,11 +105,11 @@ impl HandValue for Hand {
     fn value(&self) -> u32 {
         let mut sum = 0;
         let mut ace_count = 0;
-        for card in self.cards.iter() {
+        for card in &self.cards {
             if let Rank::Ace = card.rank {
                 ace_count += 1;
             } else {
-                sum += card_value(card, false)
+                sum += card_value(card, false);
             }
         }
         for ace_low_count in 0..=ace_count {
@@ -119,13 +120,7 @@ impl HandValue for Hand {
         sum + ace_count
     }
 }
-impl Default for Hand {
-    fn default() -> Self {
-        Self {
-            cards: Default::default(),
-        }
-    }
-}
+
 fn card_value(card: &CardFace, ace_high: bool) -> u32 {
     match card.rank {
         Rank::Ace => {
@@ -143,8 +138,8 @@ fn card_value(card: &CardFace, ace_high: bool) -> u32 {
 }
 impl Display for Hand {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for card in self.cards.iter() {
-            write!(f, "{}", card)?;
+        for card in &self.cards {
+            write!(f, "{card}")?;
         }
         Ok(())
     }
@@ -161,6 +156,8 @@ fn play_dealer(deck: &mut Deck) -> Hand {
 }
 #[cfg(test)]
 mod tests {
+    use crate::cards::Suits;
+
     #[test]
     fn hand_value_test() {
         use super::*;
@@ -169,6 +166,6 @@ mod tests {
         hand.cards.push(CardFace{rank: Rank::Ace, suit: Suits::Diamonds});
         hand.cards.push(CardFace{rank: Rank::Number(3), suit: Suits::Diamonds});
         hand.cards.push(CardFace{rank: Rank::Ace, suit: Suits::Spades});
-        assert_eq!(hand.value(), 15)
+        assert_eq!(hand.value(), 15);
     }
 }
