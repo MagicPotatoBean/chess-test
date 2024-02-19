@@ -14,10 +14,32 @@ pub fn main() {
         println!("Wins:Losses = {player_wins}:{dealer_wins}");
         deck = Deck::default();
         deck.shuffle();
-        dealer_hand = play_dealer(&mut deck);
+        dealer_hand = {
+            if let Some(hand) = play_dealer(&mut deck) {
+                hand
+            } else {
+                println!("Encountered a fatal error, returning to menu.");
+                return
+            }
+        };
+        
         player_hand.cards.clear();
-        player_hand.cards.push(deck.draw_card().unwrap());
-        player_hand.cards.push(deck.draw_card().unwrap());
+        player_hand.cards.push({
+            if let Some(card) = deck.draw_card() {
+                card
+            } else {
+                println!("Encountered a fatal error, returning to menu.");
+                return
+            }
+        });
+        player_hand.cards.push({
+            if let Some(card) = deck.draw_card() {
+                card
+            } else {
+                println!("Encountered a fatal error, returning to menu.");
+                return
+            }
+        });
         'game_loop: loop {
             println!("Your cards: {} = {}", player_hand, player_hand.value());
             if player_hand.value() > 21 {
@@ -40,7 +62,14 @@ pub fn main() {
                 } else if user_input == "reset" && confirm() {
                     break 'game_loop;
                 } else if user_input == "hit" {
-                    player_hand.cards.push(deck.draw_card().unwrap());
+                    player_hand.cards.push({
+                        if let Some(card) = deck.draw_card() {
+                            card
+                        } else {
+                            println!("Encountered a fatal error, returning to menu.");
+                            return
+                        }
+                    });
                 } else if user_input == "stand" {
                         print_winner(&player_hand, &dealer_hand, &mut player_wins, &mut dealer_wins);
                         print!("Would you like to play again? [y/n]:");
@@ -48,9 +77,8 @@ pub fn main() {
                 if let Some(response) = readline!() {
                     if response.trim().to_lowercase().as_str() == "n" {
                         break 'outer_loop
-                    } else {
-                        break 'game_loop
                     }
+                    break 'game_loop
                 }
                 }
             }
@@ -130,9 +158,7 @@ fn card_value(card: &CardFace, ace_high: bool) -> u32 {
             }
         }
         Rank::Number(num) => num,
-        Rank::Jack => 10,
-        Rank::Queen => 10,
-        Rank::King => 10,
+        Rank::Jack | Rank::Queen | Rank::King => 10,
     }
 }
 impl Display for Hand {
@@ -143,15 +169,15 @@ impl Display for Hand {
         Ok(())
     }
 }
-fn play_dealer(deck: &mut Deck) -> Hand {
+fn play_dealer(deck: &mut Deck) -> Option<Hand> {
     let mut hand = Hand::default();
     loop {
-        hand.cards.push(deck.draw_card().unwrap());
+        hand.cards.push(deck.draw_card()?);
         if hand.value() >= 17 {
             break;
         }
     }
-    hand
+    Some(hand)
 }
 #[cfg(test)]
 mod tests {

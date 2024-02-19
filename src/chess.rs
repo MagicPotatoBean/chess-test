@@ -247,12 +247,12 @@ fn validate_king(potential_move: PieceMove, board: &mut BoardState) -> bool {
     {
         match board.current_player {
             BoardColours::White => {
-                board.white_can_king_side_castle = false;
-                board.white_can_queen_side_castle = false;
+                board.white.king_side = false;
+                board.white.queen_side = false;
             }
             BoardColours::Black => {
-                board.black_can_king_side_castle = false;
-                board.black_can_queen_side_castle = false;
+                board.black.king_side = false;
+                board.black.queen_side = false;
             }
         }
         true
@@ -260,7 +260,7 @@ fn validate_king(potential_move: PieceMove, board: &mut BoardState) -> bool {
         match board.current_player.invert() {
             //No clue why but this needs to be inverted :)
             BoardColours::White => {
-                if board.white_can_king_side_castle
+                if board.white.king_side
                     && potential_move.end_file == 1
                     && potential_move.end_rank == 0
                     && !board.get_tile(1, 0).is_physical()
@@ -276,7 +276,7 @@ fn validate_king(potential_move: PieceMove, board: &mut BoardState) -> bool {
                         },
                     ); // Delete rook
                     return true;
-                } else if board.white_can_queen_side_castle
+                } else if board.white.queen_side
                     && potential_move.end_file == 5
                     && potential_move.end_rank == 0
                     && !board.get_tile(4, 0).is_physical()
@@ -296,7 +296,7 @@ fn validate_king(potential_move: PieceMove, board: &mut BoardState) -> bool {
                 }
             }
             BoardColours::Black => {
-                if board.black_can_king_side_castle
+                if board.black.king_side
                     && potential_move.end_file == 1
                     && potential_move.end_rank == 7
                     && !board.get_tile(1, 7).is_physical()
@@ -312,7 +312,7 @@ fn validate_king(potential_move: PieceMove, board: &mut BoardState) -> bool {
                         },
                     ); // Delete rook
                     return true;
-                } else if board.black_can_queen_side_castle
+                } else if board.black.queen_side
                     && potential_move.end_file == 5
                     && potential_move.end_rank == 7
                     && !board.get_tile(4, 7).is_physical()
@@ -550,10 +550,18 @@ struct PieceMove {
 struct BoardState {
     current_player: BoardColours,
     tiles: Vec<Vec<TileState>>,
-    white_can_king_side_castle: bool,
-    black_can_king_side_castle: bool,
-    white_can_queen_side_castle: bool,
-    black_can_queen_side_castle: bool,
+    white: Castling,
+    black: Castling,
+}
+#[derive(Clone, Copy)]
+struct Castling {
+    king_side: bool,
+    queen_side: bool,
+}
+impl Default for Castling {
+    fn default() -> Self {
+        Self { king_side: true, queen_side: true }
+    }
 }
 impl Default for BoardState {
     fn default() -> Self {
@@ -564,10 +572,8 @@ impl Default for BoardState {
         let mut state: BoardState = BoardState {
             current_player: BoardColours::White,
             tiles: vec![vec![blank_row; 8]; 8],
-            white_can_king_side_castle: true,
-            white_can_queen_side_castle: true,
-            black_can_king_side_castle: true,
-            black_can_queen_side_castle: true,
+            white: Castling::default(),
+            black: Castling::default(),
         };
         state.tiles[0][0].piece = Some(Pieces::Rook);
         state.tiles[1][0].piece = Some(Pieces::Knight);
@@ -611,28 +617,28 @@ impl Display for BoardState {
             result.push('w');
             result.push('h');
         }
-        if self.white_can_king_side_castle {
+        if self.white.king_side {
             result.push('t');
             result.push('r');
         } else {
             result.push('f');
             result.push('a');
         }
-        if self.white_can_queen_side_castle {
+        if self.white.queen_side {
             result.push('t');
             result.push('r');
         } else {
             result.push('f');
             result.push('a');
         }
-        if self.black_can_king_side_castle {
+        if self.black.king_side {
             result.push('t');
             result.push('r');
         } else {
             result.push('f');
             result.push('a');
         }
-        if self.black_can_queen_side_castle {
+        if self.black.queen_side {
             result.push('t');
             result.push('r');
         } else {
@@ -656,10 +662,8 @@ impl BoardState {
         BoardState {
             current_player: self.current_player,
             tiles: self.tiles.clone(),
-            white_can_king_side_castle: self.white_can_king_side_castle,
-            black_can_king_side_castle: self.black_can_king_side_castle,
-            white_can_queen_side_castle: self.white_can_queen_side_castle,
-            black_can_queen_side_castle: self.black_can_queen_side_castle,
+            white: self.white,
+            black: self.black
         }
     }
     fn from_string(serialised_board: &str) -> Self {
@@ -689,10 +693,10 @@ impl BoardState {
         } else {
             this.current_player = BoardColours::White;
         }
-        this.white_can_king_side_castle = split_string[65] == "tr";
-        this.white_can_queen_side_castle = split_string[66] == "tr";
-        this.black_can_king_side_castle = split_string[67] == "tr";
-        this.black_can_queen_side_castle = split_string[68] == "tr";
+        this.white.king_side = split_string[65] == "tr";
+        this.white.queen_side = split_string[66] == "tr";
+        this.black.king_side = split_string[67] == "tr";
+        this.black.queen_side = split_string[68] == "tr";
         this
     }
 }

@@ -9,10 +9,10 @@ impl Dice {
     pub fn roll(&mut self) {
         self.value = rand::thread_rng().gen_range(1..=6);
     }
-    pub fn get_value(&self) -> u8 {
+    pub fn get_value(self) -> u8 {
         self.value
     }
-    pub fn set_value(&mut self, val: u8) -> bool {
+    pub fn set_value(mut self, val: u8) -> bool {
         if (1..=6).contains(&val) {
             self.value = val;
             true

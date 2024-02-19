@@ -25,7 +25,6 @@ pub fn main() {
 
         draw_board(&board, board.current_player.invert());
 
-        
         let mut line: String = String::default();
         let _ = std::io::stdin().read_line(&mut line);
         line = line.trim().to_owned();
@@ -78,25 +77,25 @@ pub fn main() {
             let bytes: Vec<u8> = line.as_bytes().to_ascii_uppercase();
             let mut success: bool = true;
             if 64 <= bytes[0] && bytes[0] <= 72 {
-                current_move.start_file = bytes[0] - 65;
+                current_move.start_file = (bytes[0] - 65).into();
                 //println!("{}", bytes[0] - 65);
             } else {
                 success = false;
             }
             if 49 <= bytes[1] && bytes[1] <= 56 {
-                current_move.start_rank = bytes[1] - 49;
+                current_move.start_rank = (bytes[1] - 49).into();
                 //println!("{}", bytes[1] - 49);
             } else {
                 success = false;
             }
             if 64 <= bytes[2] && bytes[2] <= 72 {
-                current_move.end_file = bytes[2] - 65;
+                current_move.end_file = (bytes[2] - 65).into();
                 //println!("{}", bytes[2] - 65);
             } else {
                 success = false;
             }
             if 49 <= bytes[1] && bytes[1] <= 56 {
-                current_move.end_rank = bytes[3] - 49;
+                current_move.end_rank = (bytes[3] - 49).into();
                 //println!("{}", bytes[3] - 49);
             } else {
                 success = false;
@@ -130,37 +129,41 @@ fn promote_pieces(board: &mut BoardState) {
         }
     }
 }
-fn validate_and_move(potential_move: PieceMove, board: &mut BoardState, allow_move: &mut bool) -> bool {
-    if board.tiles[usize::from(potential_move.start_file)][usize::from(potential_move.start_rank)]
-        .piece_colour
+fn validate_and_move(
+    potential_move: PieceMove,
+    board: &mut BoardState,
+    allow_move: &mut bool,
+) -> bool {
+    if board.tiles[potential_move.start_file][potential_move.start_rank].piece_colour
         != board.current_player
     {
         println!("You cant move your opponent's pieces");
         return false; //Checks the moved piece belong to the player
     }
-    if board.tiles[usize::from(potential_move.start_file)][usize::from(potential_move.start_rank)]
-        .piece_colour
-        == board.tiles[usize::from(potential_move.end_file)][usize::from(potential_move.end_rank)]
-            .piece_colour
-        && board.tiles[usize::from(potential_move.end_file)]
-            [usize::from(potential_move.end_rank)]
-        .piece.is_some()
+    if board.tiles[potential_move.start_file][potential_move.start_rank].piece_colour
+        == board.tiles[potential_move.end_file][potential_move.end_rank].piece_colour
+        && board.tiles[potential_move.end_file][potential_move.end_rank]
+            .piece
+            .is_some()
     {
         return false; //Checks the player isn't taking their own pieces (and that piece exists/is en passant)
     } //This also prevents them from not moving(e.g. moving to where they are)
 
-    if match board.get_tile(potential_move.start_file.into(), potential_move.start_rank.into()).piece {
+    if match board
+        .get_tile(potential_move.start_file, potential_move.start_rank)
+        .piece
+    {
         Some(piece) => match piece {
             Pieces::Checker => {
                 let result = validate_checker(potential_move, board, *allow_move);
                 *allow_move = result;
                 result
-            },
+            }
             Pieces::King => {
                 let result = validate_king(potential_move, board, *allow_move);
                 *allow_move = result;
                 result
-            },
+            }
         },
         None => false,
     } {
@@ -170,29 +173,60 @@ fn validate_and_move(potential_move: PieceMove, board: &mut BoardState, allow_mo
     true
 }
 fn move_piece(intended_move: PieceMove, board: &mut BoardState) {
-    board.tiles[usize::from(intended_move.end_file)][usize::from(intended_move.end_rank)] = board
-        .get_owned_tile(
-            intended_move.start_file.into(),
-            intended_move.start_rank.into(),
-        );
-    board.tiles[usize::from(intended_move.start_file)][usize::from(intended_move.start_rank)] =
+    board.tiles[intended_move.end_file][intended_move.end_rank] =
+        board.get_owned_tile(intended_move.start_file, intended_move.start_rank);
+    board.tiles[intended_move.start_file][intended_move.start_rank] = TileState {
+        piece: None,
+        piece_colour: BoardColours::Black,
+    };
+}
+fn can_take_piece(potential_move: PieceMove, board: &BoardState, direction: &Direction) -> bool {
+    let (file, rank) = match direction {
+        Direction::DownLeft => (potential_move.end_file + 1, potential_move.end_rank + 1),
+        Direction::UpLeft => (potential_move.end_file + 1, potential_move.start_rank + 1),
+        Direction::DownRight => (potential_move.start_file + 1, potential_move.end_rank + 1),
+        Direction::UpRight => (potential_move.start_file + 1, potential_move.start_rank + 1),
+    };
+    board
+        .get_tile(file, rank)
+        .is_opps(board.current_player)
+        && board
+            .get_tile(potential_move.end_file, potential_move.end_rank)
+            .piece
+            .is_none()
+}
+fn take_piece(potential_move: PieceMove, board: &mut BoardState, direction: &Direction) {
+    let (file, rank) = match direction {
+        Direction::DownLeft => (potential_move.end_file + 1, potential_move.end_rank + 1),
+        Direction::UpLeft => (potential_move.end_file + 1, potential_move.start_rank + 1),
+        Direction::DownRight => (potential_move.start_file + 1, potential_move.end_rank + 1),
+        Direction::UpRight => (potential_move.start_file + 1, potential_move.start_rank + 1),
+    };
+    board.set_tile(
+        file,
+        rank,
         TileState {
             piece: None,
             piece_colour: BoardColours::Black,
-        };
+        },
+    );
+}
+enum Direction {
+    DownLeft,
+    UpLeft,
+    DownRight,
+    UpRight,
 }
 fn validate_checker(potential_move: PieceMove, board: &mut BoardState, allow_move: bool) -> bool {
     if potential_move.end_file.abs_diff(potential_move.start_file) == 1
-        && ((potential_move.end_rank == potential_move.start_rank + 1 && board.current_player == BoardColours::White) || (potential_move.end_rank == potential_move.start_rank - 1
-            && board.current_player == BoardColours::Black))
-        
+        && ((potential_move.end_rank == potential_move.start_rank + 1
+            && board.current_player == BoardColours::White)
+            || (potential_move.end_rank == potential_move.start_rank - 1
+                && board.current_player == BoardColours::Black))
         && allow_move
     {
         if board
-            .get_tile(
-                potential_move.end_file.into(),
-                potential_move.end_rank.into(),
-            )
+            .get_tile(potential_move.end_file, potential_move.end_rank)
             .piece
             .is_none()
         {
@@ -205,116 +239,40 @@ fn validate_checker(potential_move: PieceMove, board: &mut BoardState, allow_mov
         && potential_move.start_rank == potential_move.end_rank + 2
     {
         // Taking down-left
-        if board
-            .get_tile(
-                (potential_move.end_file + 1).into(),
-                (potential_move.end_rank + 1).into(),
-            )
-            .is_opps(board.current_player)
-            && board
-                .get_tile(
-                    potential_move.end_file.into(),
-                    potential_move.end_rank.into(),
-                )
-                .piece
-                .is_none()
+        if can_take_piece(potential_move, board, &Direction::DownLeft)
         {
             move_piece(potential_move, board);
-            board.set_tile(
-                (potential_move.end_file + 1).into(),
-                (potential_move.end_rank + 1).into(),
-                TileState {
-                    piece: None,
-                    piece_colour: BoardColours::Black,
-                },
-            );
+            take_piece(potential_move, board, &Direction::DownLeft);
         }
         false
     } else if potential_move.start_file == potential_move.end_file + 2
         && potential_move.start_rank + 2 == potential_move.end_rank
     {
         // Taking up-left
-        if board
-            .get_tile(
-                (potential_move.end_file + 1).into(),
-                (potential_move.start_rank + 1).into(),
-            )
-            .is_opps(board.current_player)
-            && board
-                .get_tile(
-                    potential_move.end_file.into(),
-                    potential_move.end_rank.into(),
-                )
-                .piece
-                .is_none()
+        if can_take_piece(potential_move, board, &Direction::UpLeft)
         {
             move_piece(potential_move, board);
-            board.set_tile(
-                (potential_move.end_file + 1).into(),
-                (potential_move.start_rank + 1).into(),
-                TileState {
-                    piece: None,
-                    piece_colour: BoardColours::Black,
-                },
-            );
+            take_piece(potential_move, board, &Direction::UpLeft);
         }
         false
     } else if potential_move.start_file + 2 == potential_move.end_file
         && potential_move.start_rank == potential_move.end_rank + 2
     {
         // Taking down-right
-        if board
-            .get_tile(
-                (potential_move.start_file + 1).into(),
-                (potential_move.end_rank + 1).into(),
-            )
-            .is_opps(board.current_player)
-            && board
-                .get_tile(
-                    potential_move.end_file.into(),
-                    potential_move.end_rank.into(),
-                )
-                .piece
-                .is_none()
+        if can_take_piece(potential_move, board, &Direction::DownRight)
         {
             move_piece(potential_move, board);
-            board.set_tile(
-                (potential_move.start_file + 1).into(),
-                (potential_move.end_rank + 1).into(),
-                TileState {
-                    piece: None,
-                    piece_colour: BoardColours::Black,
-                },
-            );
+            take_piece(potential_move, board, &Direction::DownRight);
         }
         false
     } else if potential_move.start_file + 2 == potential_move.end_file
         && potential_move.start_rank + 2 == potential_move.end_rank
     {
         // Taking up-right
-        if board
-            .get_tile(
-                (potential_move.start_file + 1).into(),
-                (potential_move.start_rank + 1).into(),
-            )
-            .is_opps(board.current_player)
-            && board
-                .get_tile(
-                    potential_move.end_file.into(),
-                    potential_move.end_rank.into(),
-                )
-                .piece
-                .is_none()
+        if can_take_piece(potential_move, board, &Direction::UpRight)
         {
             move_piece(potential_move, board);
-            board.set_tile(
-                (potential_move.start_file + 1).into(),
-                (potential_move.start_rank + 1).into(),
-                TileState {
-                    piece: None,
-                    piece_colour: BoardColours::Black,
-                },
-            );
+            take_piece(potential_move, board, &Direction::UpRight);
         }
         false
     } else {
@@ -327,10 +285,7 @@ fn validate_king(potential_move: PieceMove, board: &mut BoardState, allow_move: 
         && allow_move
     {
         if board
-            .get_tile(
-                potential_move.end_file.into(),
-                potential_move.end_rank.into(),
-            )
+            .get_tile(potential_move.end_file, potential_move.end_rank)
             .piece
             .is_none()
         {
@@ -343,116 +298,40 @@ fn validate_king(potential_move: PieceMove, board: &mut BoardState, allow_move: 
         && potential_move.start_rank == potential_move.end_rank + 2
     {
         // Taking down-left
-        if board
-            .get_tile(
-                (potential_move.end_file + 1).into(),
-                (potential_move.end_rank + 1).into(),
-            )
-            .is_opps(board.current_player)
-            && board
-                .get_tile(
-                    potential_move.end_file.into(),
-                    potential_move.end_rank.into(),
-                )
-                .piece
-                .is_none()
+        if can_take_piece(potential_move, board, &Direction::DownLeft)
         {
             move_piece(potential_move, board);
-            board.set_tile(
-                (potential_move.end_file + 1).into(),
-                (potential_move.end_rank + 1).into(),
-                TileState {
-                    piece: None,
-                    piece_colour: BoardColours::Black,
-                },
-            );
+            take_piece(potential_move, board, &Direction::DownLeft);
         }
         false
     } else if potential_move.start_file == potential_move.end_file + 2
         && potential_move.start_rank + 2 == potential_move.end_rank
     {
         // Taking up-left
-        if board
-            .get_tile(
-                (potential_move.end_file + 1).into(),
-                (potential_move.start_rank + 1).into(),
-            )
-            .is_opps(board.current_player)
-            && board
-                .get_tile(
-                    potential_move.end_file.into(),
-                    potential_move.end_rank.into(),
-                )
-                .piece
-                .is_none()
+        if can_take_piece(potential_move, board, &Direction::UpLeft)
         {
             move_piece(potential_move, board);
-            board.set_tile(
-                (potential_move.end_file + 1).into(),
-                (potential_move.start_rank + 1).into(),
-                TileState {
-                    piece: None,
-                    piece_colour: BoardColours::Black,
-                },
-            );
+            take_piece(potential_move, board, &Direction::UpLeft);
         }
         false
     } else if potential_move.start_file + 2 == potential_move.end_file
         && potential_move.start_rank == potential_move.end_rank + 2
     {
         // Taking down-right
-        if board
-            .get_tile(
-                (potential_move.start_file + 1).into(),
-                (potential_move.end_rank + 1).into(),
-            )
-            .is_opps(board.current_player)
-            && board
-                .get_tile(
-                    potential_move.end_file.into(),
-                    potential_move.end_rank.into(),
-                )
-                .piece
-                .is_none()
+        if can_take_piece(potential_move, board, &Direction::DownRight)
         {
             move_piece(potential_move, board);
-            board.set_tile(
-                (potential_move.start_file + 1).into(),
-                (potential_move.end_rank + 1).into(),
-                TileState {
-                    piece: None,
-                    piece_colour: BoardColours::Black,
-                },
-            );
+            take_piece(potential_move, board, &Direction::DownRight);
         }
         false
     } else if potential_move.start_file + 2 == potential_move.end_file
         && potential_move.start_rank + 2 == potential_move.end_rank
     {
         // Taking up-right
-        if board
-            .get_tile(
-                (potential_move.start_file + 1).into(),
-                (potential_move.start_rank + 1).into(),
-            )
-            .is_opps(board.current_player)
-            && board
-                .get_tile(
-                    potential_move.end_file.into(),
-                    potential_move.end_rank.into(),
-                )
-                .piece
-                .is_none()
+        if can_take_piece(potential_move, board, &Direction::UpRight)
         {
             move_piece(potential_move, board);
-            board.set_tile(
-                (potential_move.start_file + 1).into(),
-                (potential_move.start_rank + 1).into(),
-                TileState {
-                    piece: None,
-                    piece_colour: BoardColours::Black,
-                },
-            );
+            take_piece(potential_move, board, &Direction::UpRight);
         }
         false
     } else {
@@ -461,10 +340,10 @@ fn validate_king(potential_move: PieceMove, board: &mut BoardState, allow_move: 
 }
 #[derive(Clone, Copy, Debug)]
 struct PieceMove {
-    start_rank: u8,
-    start_file: u8,
-    end_rank: u8,
-    end_file: u8,
+    start_rank: usize,
+    start_file: usize,
+    end_rank: usize,
+    end_file: usize,
 }
 fn help_menu() {
     println!();
@@ -474,7 +353,10 @@ fn help_menu() {
         "history".red()
     );
     println!("Type \"{}\" to display this menu.", "help".red());
-    println!("Type \"{}\" to end your turn (only required when taking a piece)", "stop".red());
+    println!(
+        "Type \"{}\" to end your turn (only required when taking a piece)",
+        "stop".red()
+    );
     println!("Type \"{}\" to restart the game.", "reset".red());
     // println!("Type \"{}\" to save the state of the board.", "save".red());
     // println!("Type \"{}\" to load the state of the board.", "load".red());
@@ -493,7 +375,7 @@ enum BoardColours {
     Black,
 }
 impl BoardColours {
-    fn invert(&self) -> Self {
+    fn invert(self) -> Self {
         match self {
             BoardColours::White => BoardColours::Black,
             BoardColours::Black => BoardColours::White,
@@ -505,30 +387,31 @@ enum Pieces {
     Checker,
     King,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Copy)]
 struct TileState {
     piece: Option<Pieces>,
     piece_colour: BoardColours,
 }
 impl TileState {
-    fn to_string(&self) -> ColoredString {
+    fn to_string(self) -> ColoredString {
         let self_string: ColoredString;
         match self.piece {
             Some(piece) => match piece {
                 Pieces::Checker => {
-                    
                     let mut sprite = match self.piece_colour {
                         BoardColours::White => WHITECHECKERSPRITE,
                         BoardColours::Black => BLACKCHECKERSPRITE,
-                    }.to_string();
+                    }
+                    .to_string();
                     sprite.push(' ');
                     self_string = sprite.as_str().into();
                 }
                 Pieces::King => {
-                    let mut sprite = match self.piece_colour{
+                    let mut sprite = match self.piece_colour {
                         BoardColours::White => WHITEKINGSPRITE,
                         BoardColours::Black => BLACKKINGSPRITE,
-                    }.to_string();
+                    }
+                    .to_string();
                     sprite.push(' ');
                     self_string = sprite.as_str().into();
                 }
@@ -537,7 +420,7 @@ impl TileState {
         }
         self_string
     }
-    fn is_white(&self) -> bool {
+    fn is_white(self) -> bool {
         match self.piece {
             Some(_) => match self.piece_colour {
                 BoardColours::White => true,
@@ -546,7 +429,7 @@ impl TileState {
             None => false,
         }
     }
-    fn is_black(&self) -> bool {
+    fn is_black(self) -> bool {
         match self.piece {
             Some(_) => match self.piece_colour {
                 BoardColours::White => false,
@@ -562,33 +445,30 @@ impl TileState {
     //         false // Pieces aren't "Some"
     //     }
     // }
-    fn is_opps(&self, as_player: BoardColours) -> bool {
+    fn is_opps(self, as_player: BoardColours) -> bool {
         if self.piece.is_some() {
             self.piece_colour != as_player
         } else {
             false // Pieces aren't "Some"
         }
     }
-    fn promote(&mut self) {
-        self.piece = self.piece.map(|piece| match piece {
-            Pieces::Checker => Pieces::King,
-            Pieces::King => Pieces::King,
-        });
+    fn promote(mut self) {
+        self.piece = self.piece.map(|_piece| Pieces::King);
     }
 }
 struct BoardState {
     current_player: BoardColours,
-    tiles: Vec<Vec<TileState>>,
+    tiles: [[TileState;8];8],
 }
 impl BoardState {
     fn get_tile(&self, file: usize, rank: usize) -> &TileState {
         &self.tiles[file][rank]
     }
     fn get_owned_tile(&self, file: usize, rank: usize) -> TileState {
-        self.tiles[file][rank].clone()
+        self.tiles[file][rank]
     }
-    fn set_tile(&mut self, file: usize, rank: usize, tile: TileState) {
-        self.tiles[file][rank] = tile;
+    fn set_tile(&mut self, file: usize, rank: usize, new_tile: TileState) {
+        self.tiles[file][rank] = new_tile;
     }
     // fn clone(&self) -> BoardState {
     //     BoardState {
@@ -605,7 +485,7 @@ impl Default for BoardState {
         };
         let mut state: BoardState = BoardState {
             current_player: BoardColours::White,
-            tiles: vec![vec![blank_row; 8]; 8],
+            tiles: [[blank_row; 8]; 8],
         };
         for x in 0..=7 {
             for y in 0..=7 {
@@ -618,21 +498,13 @@ impl Default for BoardState {
                         }
                     };
                     if (x + y).rem(2) == 1 {
-                        let tile = state
-                            .tiles
-                            .get_mut(x as usize)
-                            .unwrap()
-                            .get_mut(y as usize)
-                            .unwrap();
+                        let mut tile = state
+                            .tiles[x][y];
                         tile.piece = Some(Pieces::Checker);
                         tile.piece_colour = colour;
                     } else {
                         state
-                            .tiles
-                            .get_mut(x as usize)
-                            .unwrap()
-                            .get_mut(y as usize)
-                            .unwrap()
+                            .tiles[x][y]
                             .piece = None;
                     }
                 }
@@ -661,7 +533,7 @@ fn draw_board(board: &BoardState, as_player: BoardColours) {
                     print!(
                         "{}",
                         to_piece_name(
-                            &board.tiles[usize::try_from(x - 1).expect("index out of bounds")]
+                            board.tiles[usize::try_from(x - 1).expect("index out of bounds")]
                                 [usize::try_from(y - 1).expect("index out of bounds")],
                             if (x + y) % 2 == 1 {
                                 BoardColours::Black
@@ -694,7 +566,7 @@ fn draw_board(board: &BoardState, as_player: BoardColours) {
                     print!(
                         "{}",
                         to_piece_name(
-                            &board.tiles[usize::try_from(x).expect("index out of bounds")]
+                            board.tiles[usize::try_from(x).expect("index out of bounds")]
                                 [usize::try_from(y).expect("index out of bounds")],
                             if (x + y) % 2 == 1 {
                                 BoardColours::Black
@@ -724,7 +596,7 @@ fn draw_board(board: &BoardState, as_player: BoardColours) {
     let _ = std::io::stdout().flush();
 }
 
-fn to_piece_name(tile: &TileState, colour: BoardColours) -> ColoredString {
+fn to_piece_name(tile: TileState, colour: BoardColours) -> ColoredString {
     match colour {
         BoardColours::White => tile.to_string().on_black().white(),
         BoardColours::Black => tile.to_string().on_white().black(),
