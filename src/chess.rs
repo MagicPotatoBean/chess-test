@@ -57,7 +57,7 @@ pub fn main() {
             path = path.trim().to_owned();
             let file_data = std::fs::read_to_string(path);
             match file_data {
-                Ok(string_data) => board = BoardState::from_string(string_data),
+                Ok(string_data) => board = BoardState::from_string(&string_data),
                 Err(_) => println!("{}", "Failed to load file.".red()),
             }
         } else if line.len().eq(&usize::from(4u8)) {
@@ -93,7 +93,10 @@ pub fn main() {
                 /*if view_board_as == BoardColours::Black {
                     current_move.rotate_self();
                 }*/
-                validate_and_play(current_move, &mut board, &turn_count);
+                if validate_and_play(current_move, &mut board, turn_count).is_none() {
+                    println!("Encountered an error, returning to menu");
+                    return;
+                }
                 turn_count += 1;
             } else {
                 println!();
@@ -109,7 +112,10 @@ pub fn main() {
 fn help_menu() {
     println!();
     println!("Type \"{}\" to return to the menu.", "menu".red());
-    println!("Type \"{}\" to get the history of the game.", "history".red());
+    println!(
+        "Type \"{}\" to get the history of the game.",
+        "history".red()
+    );
     println!("Type \"{}\" to show this menu.", "help".red());
     println!("Type \"{}\" to restart the game.", "reset".red());
     println!("Type \"{}\" to save the state of the board.", "save".red());
@@ -123,34 +129,39 @@ fn confirm() -> bool {
     let _ = std::io::stdin().read_line(&mut line);
     line.trim().eq_ignore_ascii_case("y")
 }
-fn validate_and_play(potential_move: PieceMove, board: &mut BoardState, turn_count: &i32) {
-    if validate_move(potential_move, board, turn_count) {
+fn validate_and_play(
+    potential_move: PieceMove,
+    board: &mut BoardState,
+    turn_count: i32,
+) -> Option<()> {
+    if validate_move(potential_move, board, turn_count)? {
         move_piece(potential_move, board, turn_count);
         board.current_player = match board.current_player {
             BoardColours::White => BoardColours::Black,
             BoardColours::Black => BoardColours::White,
         }
-    }
+    };
+    Some(())
 }
-fn move_piece(intended_move: PieceMove, board: &mut BoardState, turn_count: &i32) {
-    if let Some(Pieces::EnPassant(ep_turn_count)) = board.tiles[usize::from(intended_move.end_file)][usize::from(intended_move.end_rank)]
-            .piece {
-            if ep_turn_count + 1 == *turn_count {
-                match board.current_player {
-                    BoardColours::Black => {
-                        board.tiles[usize::from(intended_move.end_file)]
-                            [usize::from(intended_move.end_rank) + 1]
-                            .piece = None;
-                    }
-                    BoardColours::White => {
-                        board.tiles[usize::from(intended_move.end_file)]
-                            [usize::from(intended_move.end_rank) - 1]
-                            .piece = None;
-                    }
+fn move_piece(intended_move: PieceMove, board: &mut BoardState, turn_count: i32) {
+    if let Some(Pieces::EnPassant(ep_turn_count)) =
+        board.tiles[usize::from(intended_move.end_file)][usize::from(intended_move.end_rank)].piece
+    {
+        if ep_turn_count + 1 == turn_count {
+            match board.current_player {
+                BoardColours::Black => {
+                    board.tiles[usize::from(intended_move.end_file)]
+                        [usize::from(intended_move.end_rank) + 1]
+                        .piece = None;
+                }
+                BoardColours::White => {
+                    board.tiles[usize::from(intended_move.end_file)]
+                        [usize::from(intended_move.end_rank) - 1]
+                        .piece = None;
                 }
             }
-            board.tiles[usize::from(intended_move.end_file)]
-                [usize::from(intended_move.end_rank)]
+        }
+        board.tiles[usize::from(intended_move.end_file)][usize::from(intended_move.end_rank)]
             .piece = None;
     }
 
@@ -162,7 +173,11 @@ fn move_piece(intended_move: PieceMove, board: &mut BoardState, turn_count: &i32
             piece_colour: BoardColours::Black,
         };
 }
-fn validate_move(potential_move: PieceMove, board: &mut BoardState, turn_count: &i32) -> bool {
+fn validate_move(
+    potential_move: PieceMove,
+    board: &mut BoardState,
+    turn_count: i32,
+) -> Option<bool> {
     if !match board.tiles[usize::from(potential_move.start_file)]
         [usize::from(potential_move.start_rank)]
     .piece
@@ -174,14 +189,14 @@ fn validate_move(potential_move: PieceMove, board: &mut BoardState, turn_count: 
         None => false,
     } {
         println!("This piece isnt allowed to be moved");
-        return false; //Checks the piece is "moveable" (not 'None', or 'EnPassant placeholder')
+        return Some(false); //Checks the piece is "moveable" (not 'None', or 'EnPassant placeholder')
     }
     if board.tiles[usize::from(potential_move.start_file)][usize::from(potential_move.start_rank)]
         .piece_colour
         != board.current_player
     {
         println!("You cant move your opponent's pieces");
-        return false; //Checks the moved piece belong to the player
+        return Some(false); //Checks the moved piece belong to the player
     }
     if board.tiles[usize::from(potential_move.start_file)][usize::from(potential_move.start_rank)]
         .piece_colour
@@ -201,7 +216,7 @@ fn validate_move(potential_move: PieceMove, board: &mut BoardState, turn_count: 
             None => false,
         }
     {
-        return false; //Checks the player isn't taking their own pieces (and that piece exists/is en passant)
+        return Some(false); //Checks the player isn't taking their own pieces (and that piece exists/is en passant)
     } //This also prevents them from not moving(e.g. moving to where they are)
 
     if !match board.tiles[usize::from(potential_move.start_file)]
@@ -210,19 +225,19 @@ fn validate_move(potential_move: PieceMove, board: &mut BoardState, turn_count: 
     {
         Some(piece) => match piece {
             Pieces::Pawn => validate_pawn(potential_move, board, turn_count), //Checks that the chosen piece moves appropriately
-            Pieces::Rook => validate_rook(potential_move, board),
+            Pieces::Rook => validate_rook(potential_move, board)?,
             Pieces::Knight => validate_knight(potential_move),
-            Pieces::Bishop => validate_bishop(potential_move, board),
-            Pieces::Queen => validate_queen(potential_move, board),
+            Pieces::Bishop => validate_bishop(potential_move, board)?,
+            Pieces::Queen => validate_queen(potential_move, board)?,
             Pieces::King => validate_king(potential_move, board),
             Pieces::EnPassant(_) => false,
         },
         None => false,
     } {
-        return false;
+        return Some(false);
     }
 
-    true
+    Some(true)
 }
 fn validate_king(potential_move: PieceMove, board: &mut BoardState) -> bool {
     if (potential_move.start_file.abs_diff(potential_move.end_file) == 1
@@ -321,13 +336,13 @@ fn validate_king(potential_move: PieceMove, board: &mut BoardState) -> bool {
         false
     }
 }
-fn validate_queen(potential_move: PieceMove, board: &BoardState) -> bool {
-    if !has_jumped_over(potential_move, board, true, true) {
-        true
-    } else {
+fn validate_queen(potential_move: PieceMove, board: &BoardState) -> Option<bool> {
+    Some(if has_jumped_over(potential_move, board, true, true)? {
         println!("You cannot move a queen in this way");
         false
-    }
+    } else {
+        true
+    })
 }
 fn validate_knight(potential_move: PieceMove) -> bool {
     if (potential_move.start_file.abs_diff(potential_move.end_file) == 2
@@ -341,21 +356,21 @@ fn validate_knight(potential_move: PieceMove) -> bool {
         false
     }
 }
-fn validate_bishop(potential_move: PieceMove, board: &BoardState) -> bool {
-    if !has_jumped_over(potential_move, board, false, true) {
-        true
-    } else {
+fn validate_bishop(potential_move: PieceMove, board: &BoardState) -> Option<bool> {
+    Some(if has_jumped_over(potential_move, board, false, true)? {
         println!("You cannot move a bishop in this way");
         false
-    }
-}
-fn validate_rook(potential_move: PieceMove, board: &BoardState) -> bool {
-    if !has_jumped_over(potential_move, board, true, false) {
-        true
     } else {
+        true
+    })
+}
+fn validate_rook(potential_move: PieceMove, board: &BoardState) -> Option<bool> {
+    Some(if has_jumped_over(potential_move, board, true, false)? {
         println!("You cannot move a rook in this way");
         false
-    }
+    } else {
+        true
+    })
 }
 fn umin(a: u8, b: u8) -> u8 {
     if a < b {
@@ -378,84 +393,86 @@ fn has_jumped_over(
     board: &BoardState,
     allow_cardinal: bool,
     allow_diagonal: bool,
-) -> bool {
-    if potential_move.start_file == potential_move.end_file && allow_cardinal {
-        // Vertical
-        let lower_y = umin(potential_move.start_rank, potential_move.end_rank) + 1; //Allows taking
-        let mut current_y = lower_y;
-        let higher_y = umax(potential_move.start_rank, potential_move.end_rank) - 1; //Prevents itself from blocking
-        while current_y <= higher_y {
-            if board
-                .get_tile(potential_move.start_file.into(), current_y.into())
-                .is_physical()
-            {
-                return true;
+) -> Option<bool> {
+    Some(
+        if potential_move.start_file == potential_move.end_file && allow_cardinal {
+            // Vertical
+            let lower_y = umin(potential_move.start_rank, potential_move.end_rank) + 1; //Allows taking
+            let mut current_y = lower_y;
+            let higher_y = umax(potential_move.start_rank, potential_move.end_rank) - 1; //Prevents itself from blocking
+            while current_y <= higher_y {
+                if board
+                    .get_tile(potential_move.start_file.into(), current_y.into())
+                    .is_physical()
+                {
+                    return Some(true);
+                }
+                current_y += current_y;
             }
-            current_y += current_y;
-        }
-        false
-    } else if potential_move.start_rank == potential_move.end_rank && allow_cardinal {
-        // Horizontal
-        let lower_x = umin(potential_move.start_file, potential_move.end_file) + 1; //Allows taking
-        let mut current_x = lower_x;
-        let higher_x = umax(potential_move.start_file, potential_move.end_file) - 1; //Prevents itself from blocking
-        while current_x <= higher_x {
-            if board
-                .get_tile(current_x.into(), potential_move.start_rank.into())
-                .is_physical()
-            {
-                return true;
+            false
+        } else if potential_move.start_rank == potential_move.end_rank && allow_cardinal {
+            // Horizontal
+            let lower_x = umin(potential_move.start_file, potential_move.end_file) + 1; //Allows taking
+            let mut current_x = lower_x;
+            let higher_x = umax(potential_move.start_file, potential_move.end_file) - 1; //Prevents itself from blocking
+            while current_x <= higher_x {
+                if board
+                    .get_tile(current_x.into(), potential_move.start_rank.into())
+                    .is_physical()
+                {
+                    return Some(true);
+                }
+                current_x += current_x;
             }
-            current_x += current_x;
-        }
-        return false;
-    } else if (i32::from(potential_move.start_file) - i32::from(potential_move.start_rank)
-        == i32::from(potential_move.end_file) - i32::from(potential_move.end_rank)
-        || i32::from(potential_move.start_file) + i32::from(potential_move.start_rank)
-            == i32::from(potential_move.end_file) + i32::from(potential_move.end_rank))
-        && allow_diagonal
-    {
-        // y=x, or y=-x diagonal
-        let x_step: i8;
-        let low_x: i16;
-        let high_x: i16;
-        if potential_move.start_file < potential_move.end_file {
-            x_step = 1;
-            low_x = potential_move.start_file.into();
-            high_x = potential_move.end_file.into();
-        } else {
-            x_step = -1;
-            high_x = potential_move.start_file.into();
-            low_x = potential_move.end_file.into();
-        }
-        let y_step: i8 = if potential_move.start_rank < potential_move.end_rank {
-            1
-        } else {
-            -1
-        };
-        let mut current_x: i8 = i8::try_from(potential_move.start_file).unwrap() + x_step;
-        let mut current_y: i8 = i8::try_from(potential_move.start_rank).unwrap() + y_step;
+            return Some(false);
+        } else if (i32::from(potential_move.start_file) - i32::from(potential_move.start_rank)
+            == i32::from(potential_move.end_file) - i32::from(potential_move.end_rank)
+            || i32::from(potential_move.start_file) + i32::from(potential_move.start_rank)
+                == i32::from(potential_move.end_file) + i32::from(potential_move.end_rank))
+            && allow_diagonal
+        {
+            // y=x, or y=-x diagonal
+            let x_step: i8;
+            let low_x: i16;
+            let high_x: i16;
+            if potential_move.start_file < potential_move.end_file {
+                x_step = 1;
+                low_x = potential_move.start_file.into();
+                high_x = potential_move.end_file.into();
+            } else {
+                x_step = -1;
+                high_x = potential_move.start_file.into();
+                low_x = potential_move.end_file.into();
+            }
+            let y_step: i8 = if potential_move.start_rank < potential_move.end_rank {
+                1
+            } else {
+                -1
+            };
+            let mut current_x: i8 = i8::try_from(potential_move.start_file).ok()? + x_step;
+            let mut current_y: i8 = i8::try_from(potential_move.start_rank).ok()? + y_step;
 
-        while low_x < current_x.into() && high_x > current_x.into() {
-            if board
-                .get_tile(
-                    usize::try_from(current_x).expect("Coordinate was negative"),
-                    usize::try_from(current_y).expect("Coordinate was negative"),
-                )
-                .is_physical()
-            {
-                return true;
+            while low_x < current_x.into() && high_x > current_x.into() {
+                if board
+                    .get_tile(
+                        usize::try_from(current_x).expect("Coordinate was negative"),
+                        usize::try_from(current_y).expect("Coordinate was negative"),
+                    )
+                    .is_physical()
+                {
+                    return Some(true);
+                }
+                current_x += x_step;
+                current_y += y_step;
             }
-            current_x += x_step;
-            current_y += y_step;
-        }
-        false
-    } else {
-        true
-    }
+            false
+        } else {
+            true
+        },
+    )
 }
 
-fn validate_pawn(potential_move: PieceMove, board: &mut BoardState, turn_count: &i32) -> bool {
+fn validate_pawn(potential_move: PieceMove, board: &mut BoardState, turn_count: i32) -> bool {
     let is_taking = match board.tiles[usize::from(potential_move.end_file)]
         [usize::from(potential_move.end_rank)]
     .piece
@@ -487,7 +504,7 @@ fn validate_pawn(potential_move: PieceMove, board: &mut BoardState, turn_count: 
                 correct_rank = true;
                 board.tiles[usize::from(potential_move.start_file)]
                     [usize::from(potential_move.start_rank - 1)]
-                .piece = Some(Pieces::EnPassant(*turn_count));
+                .piece = Some(Pieces::EnPassant(turn_count));
             }
         }
         BoardColours::White => {
@@ -504,7 +521,7 @@ fn validate_pawn(potential_move: PieceMove, board: &mut BoardState, turn_count: 
                 correct_rank = true;
                 board.tiles[usize::from(potential_move.start_file)]
                     [usize::from(potential_move.start_rank + 1)]
-                .piece = Some(Pieces::EnPassant(*turn_count));
+                .piece = Some(Pieces::EnPassant(turn_count));
             }
         }
     };
@@ -632,8 +649,8 @@ impl BoardState {
     fn get_owned_tile(&self, file: usize, rank: usize) -> TileState {
         self.copy().tiles[file][rank]
     }
-    fn set_tile(&mut self, file: usize, rank: usize, tile: TileState) {
-        self.tiles[file][rank] = tile;
+    fn set_tile(&mut self, file: usize, rank: usize, new_tile: TileState) {
+        self.tiles[file][rank] = new_tile;
     }
     fn copy(&self) -> BoardState {
         BoardState {
@@ -645,9 +662,9 @@ impl BoardState {
             black_can_queen_side_castle: self.black_can_queen_side_castle,
         }
     }
-    fn from_string(serialised_board: String) -> Self {
+    fn from_string(serialised_board: &str) -> Self {
         let mut this = BoardState::default();
-        let split_string = to_chunks(&serialised_board, 2);
+        let split_string = to_chunks(serialised_board, 2);
         // let mut num: Vec<u8> = split_string[69].bytes().collect();
         // let num1 = i32::from(num.pop().unwrap_or(0));
         // let num2 = i32::from(num.pop().unwrap_or(0));
@@ -685,17 +702,25 @@ pub fn to_chunks(string: &str, chunk_size: usize) -> Vec<&str> {
     let mut remaining = string;
     loop {
         // Get the byte offset of the nth character each time so we can split the string
-        match remaining.char_indices().nth(chunk_size) {
-            Some((offset, _)) => {
-                let (a, b) = remaining.split_at(offset);
-                sections.push(a);
-                remaining = b;
-            }
-            None => {
-                sections.push(remaining);
-                return sections;
-            }
+        if let Some((offset, _)) = remaining.char_indices().nth(chunk_size) {
+            let (a, b) = remaining.split_at(offset);
+            sections.push(a);
+            remaining = b;
+        } else {
+            sections.push(remaining);
+            return sections;
         }
+        // match remaining.char_indices().nth(chunk_size) {
+        //     Some((offset, _)) => {
+        //         let (a, b) = remaining.split_at(offset);
+        //         sections.push(a);
+        //         remaining = b;
+        //     }
+        //     None => {
+        //         sections.push(remaining);
+        //         return sections;
+        //     }
+        // }
     }
 }
 #[derive(Clone, Copy)]
@@ -760,10 +785,8 @@ impl std::fmt::Display for TileState {
                     Pieces::Bishop => "\u{2657} ",
                     Pieces::Queen => "\u{2655} ",
                     Pieces::King => "\u{2654} ",
-                    Pieces::EnPassant(_) => {
-                        "  "
-                    },
-                }
+                    Pieces::EnPassant(_) => "  ",
+                },
                 BoardColours::Black => match piece {
                     Pieces::Pawn => "\u{265F} ",
                     Pieces::Rook => "\u{265C} ",
@@ -771,15 +794,10 @@ impl std::fmt::Display for TileState {
                     Pieces::Bishop => "\u{265D} ",
                     Pieces::Queen => "\u{265B} ",
                     Pieces::King => "\u{265A} ",
-                    Pieces::EnPassant(_) => {
-                        "  "
-                    },
-                }
-                
+                    Pieces::EnPassant(_) => "  ",
+                },
             },
-            None => {
-                "  "
-            }
+            None => "  ",
         };
         write!(f, "{piece_name}")
     }
@@ -788,15 +806,7 @@ impl TileState {
     ///True for any piece except None, or En Passant
     fn is_physical(&self) -> bool {
         match &self.piece {
-            Some(piece) => match piece {
-                Pieces::Pawn => true,
-                Pieces::Rook => true,
-                Pieces::Knight => true,
-                Pieces::Bishop => true,
-                Pieces::Queen => true,
-                Pieces::King => true,
-                Pieces::EnPassant(_) => false,
-            },
+            Some(piece) => !matches!(piece, Pieces::EnPassant(_)),
             None => false,
         }
     }
@@ -823,32 +833,32 @@ impl TileState {
     fn as_string(self) -> String {
         let mut display_colour = true;
         let mut value = String::default();
-        value.push( match self.piece {
-                Some(piece) => match piece {
-            Pieces::Pawn => 'P',
-            Pieces::Rook => 'R',
-            Pieces::Knight => 'N',
-            Pieces::Bishop => 'B',
-            Pieces::Queen => 'Q',
-            Pieces::King => 'K',
-            Pieces::EnPassant(_) => {
-                display_colour = false;
-                ' '
+        value.push(if let Some(piece) = self.piece {
+            match piece {
+                Pieces::Pawn => 'P',
+                Pieces::Rook => 'R',
+                Pieces::Knight => 'N',
+                Pieces::Bishop => 'B',
+                Pieces::Queen => 'Q',
+                Pieces::King => 'K',
+                Pieces::EnPassant(_) => {
+                    display_colour = false;
+                    ' '
+                }
             }
-        },
-        None => {
+        } else {
             display_colour = false;
             ' '
-            }
         });
-        value.push(if display_colour {match self.piece_colour {
-            BoardColours::White => 'w',
-            BoardColours::Black => 'b',
-        }} else {
+        value.push(if display_colour {
+            match self.piece_colour {
+                BoardColours::White => 'w',
+                BoardColours::Black => 'b',
+            }
+        } else {
             ' '
         });
         value
-
     }
 }
 
@@ -866,7 +876,7 @@ enum BoardColours {
     Black,
 }
 impl BoardColours {
-    fn invert(&self) -> BoardColours {
+    fn invert(self) -> BoardColours {
         match &self {
             BoardColours::White => BoardColours::Black,
             BoardColours::Black => BoardColours::White,
@@ -968,7 +978,7 @@ fn draw_board(board: &BoardState, as_player: BoardColours) {
             print!("{}", " White's move:".black().on_white());
         }
     }
-    std::io::stdout().flush().unwrap();
+    let _ = std::io::stdout().flush();
 }
 
 fn to_piece_name(tile: &TileState, colour: BoardColours) -> ColoredString {

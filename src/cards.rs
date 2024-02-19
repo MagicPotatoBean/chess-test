@@ -45,10 +45,10 @@ impl PartialOrd for Rank {
     }
 }
 impl Rank {
-    fn get_unicode_offset(&self) -> u32 {
+    fn get_unicode_offset(self) -> u32 {
         match self {
             Rank::Ace => 1,
-            Rank::Number(val) => *val,
+            Rank::Number(val) => val,
             Rank::Jack => 11,
             Rank::Queen => 13,
             Rank::King => 14,
@@ -63,7 +63,7 @@ pub enum Suits {
     Clubs,
 }
 impl Suits {
-    fn get_unicode_offset(&self) -> u32 {
+    fn get_unicode_offset(self) -> u32 {
         match self {
             Suits::Spades => 0x00,
             Suits::Hearts => 0x10,
@@ -98,7 +98,7 @@ impl PartialOrd for CardFace {
 impl Display for CardFace {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let card_unicode = 0x1F0A0 + self.suit.get_unicode_offset() + self.rank.get_unicode_offset();
-                let card_char = char::from_u32(card_unicode).unwrap();
+                let card_char = char::from_u32(card_unicode).expect("These literal values are valid utf8");
                 write!(f, "{card_char} ")
     }
 }
@@ -111,7 +111,7 @@ impl Display for Card {
         match self.card {
             Some(card) => {
                 let card_unicode = 0x1F0A0 + card.suit.get_unicode_offset() + card.rank.get_unicode_offset();
-                let card_char = char::from_u32(card_unicode).unwrap();
+                let card_char = char::from_u32(card_unicode).expect("These literal values are valid utf8");
                 write!(f, "{card_char} ")
             }
             None => write!(f, "\u{1F0A0} "),
