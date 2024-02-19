@@ -27,9 +27,8 @@ pub fn main() {
                 if let Some(response) = readline!() {
                     if response.trim().to_lowercase().as_str() == "n" {
                         break 'outer_loop
-                    } else {
-                        break 'game_loop
                     }
+                    break 'game_loop
                 }
             }
             if let Some(user_input) = readline!() {
